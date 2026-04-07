@@ -2,8 +2,8 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from auth import auth_dependencies
-from config import Config
+from .auth import auth_dependencies
+from .config import Config
 
 
 config = Config()

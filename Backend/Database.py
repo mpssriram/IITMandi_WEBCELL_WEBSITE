@@ -1,12 +1,14 @@
 import mysql.connector
 from mysql.connector import Error
 
-from config import Config
+from .config import Config
 
 
 class DatabaseError(Exception):
-    """Custom exception for database failures."""
+    pass
 
+class TextError(Exception):
+    pass
 
 class Database:
     """
@@ -98,30 +100,55 @@ class Database:
             raise DatabaseError(f"Failed to close database connection: {exc}") from exc
         finally:
             self.connection = None
-
-    def test_connection(self):
+# ----------------------------
+    # Features for the product
+# ----------------------------
+    def Eventaddition(self, event_data):
         """
-        Simple helper to test whether the database connection is working.
-
-        Returns:
-            dict: Result from MySQL with the current server time.
+        Add a new event to the database.
+        event_data should be a dictionary with event details.
         """
+        conn = self._connect()
         cursor = None
 
         try:
-            cursor = self.get_cursor()
-            cursor.execute("SELECT NOW() AS server_time")
-            result = cursor.fetchone()
-            return result
-        except Exception:
+            cursor = conn.cursor(dictionary=True)
+
+            # Assuming events table structure - adjust column names as needed
+
+
+            sql = """
+            INSERT INTO events (
+                title, description, date, time, location, organizer,
+                max_participants, created_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            """
+
+            cursor.execute(sql, (
+                event_data.get('title'),
+                event_data.get('description'),
+                event_data.get('date'),
+                event_data.get('time'),
+                event_data.get('location'),
+                event_data.get('organizer'),
+                event_data.get('max_participants', 0)
+            ))
+
+            self.commit()
+            return {"success": True, "event_id": cursor.lastrowid}
+
+        except Error as exc:
             self.rollback()
-            raise
+            raise DatabaseError(f"Failed to add event: {exc}") from exc
         finally:
-            if cursor is not None:
+            if cursor:
                 cursor.close()
-            self.close()
+            conn.close()
+        
+   
+
 
 
 if __name__ == "__main__":
     db = Database()
-    print(db.test_connection())
+    # print(db.test_connection())
