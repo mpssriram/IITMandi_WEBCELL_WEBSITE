@@ -1,0 +1,13 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Local config / secrets
+Backend/config.yaml
+Backend/firebase-adminsdk.json
+
+# Optional env files
+.env
+.env.*
+
+
