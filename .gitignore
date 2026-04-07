@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 
 # Local config / secrets
+firebase.js
 Backend/config.yaml
 Backend/firebase-adminsdk.json
 
