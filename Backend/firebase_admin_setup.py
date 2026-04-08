@@ -3,7 +3,10 @@ from pathlib import Path
 import firebase_admin
 from firebase_admin import auth, credentials
 
-from config import Config
+try:
+    from .config import Config
+except ImportError:
+    from config import Config
 
 
 class FirebaseServiceError(Exception):

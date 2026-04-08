@@ -1,6 +1,9 @@
 from fastapi import Depends, Header, HTTPException, status
 
-from firebase_admin_setup import FirebaseService, FirebaseServiceError
+try:
+    from .firebase_admin_setup import FirebaseService, FirebaseServiceError
+except ImportError:
+    from firebase_admin_setup import FirebaseService, FirebaseServiceError
 
 
 class AuthDependencies:

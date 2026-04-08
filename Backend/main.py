@@ -2,8 +2,10 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
+from .admin.routes import router as admin_router
 from .auth import auth_dependencies
 from .config import Config
+from .user.routes import router as user_router
 
 
 config = Config()
@@ -38,9 +40,13 @@ def get_me(current_user=Depends(auth_dependencies.get_current_user)):
     }
 
 
+app.include_router(admin_router)
+app.include_router(user_router)
+
+
 if __name__ == "__main__":
     uvicorn.run(
-        "main:app",
+        "Backend.main:app",
         host=config.HOST,
         port=config.PORT,
         reload=False,
