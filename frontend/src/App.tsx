@@ -1,4 +1,6 @@
-import { ArrowRight, ArrowUpRight, ChevronRight, Code2, MonitorSmartphone, ShieldCheck, Sparkles, Users2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+import { ArrowRight, ArrowUpRight, ChevronRight, Code2, MonitorSmartphone, Rocket, ShieldCheck, Sparkles, Users2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { Footer } from "@/components/Footer";
@@ -9,19 +11,162 @@ import { StatCounter } from "@/components/StatCounter";
 import {
     clubHighlights,
     domains,
-    events,
     galleryHighlights,
     heroStats,
     joinReasons,
-    projects,
-    team,
     testimonials,
 } from "@/data/site";
+import {
+    getPublicEvents,
+    getPublicProjects,
+    getPublicTeam,
+    submitJoinApplication,
+    type JoinPayload,
+    type PublicEvent,
+    type PublicProject,
+    type PublicTeamMember,
+} from "@/lib/api";
 
 const sectionCardClass =
     "group relative overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.045] p-5 shadow-[0_24px_80px_-40px_rgba(0,0,0,0.65)] backdrop-blur-sm transition-all duration-500 hover:-translate-y-1.5 hover:border-cyan-300/45 hover:bg-white/[0.08] hover:shadow-[0_28px_90px_-40px_rgba(6,182,212,0.45)] before:pointer-events-none before:absolute before:inset-0 before:bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_35%,transparent_70%,rgba(103,232,249,0.08))] before:opacity-0 before:transition-opacity before:duration-500 hover:before:opacity-100";
 
+type FetchState<T> = {
+    loading: boolean;
+    error: string;
+    items: T[];
+};
+
+const initialFetchState = <T,>(): FetchState<T> => ({
+    loading: true,
+    error: "",
+    items: [],
+});
+
+const emptyJoinForm: JoinPayload = {
+    name: "",
+    email: "",
+    year: "",
+    interest: "",
+    message: "",
+};
+
+function formatEventDate(dateValue: string) {
+    const parsed = new Date(dateValue);
+    if (Number.isNaN(parsed.getTime())) {
+        return dateValue;
+    }
+    return parsed.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+    });
+}
+
+function getInitials(name: string) {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) {
+        return "TM";
+    }
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+    }
+    return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
 function App() {
+    const [teamState, setTeamState] = useState<FetchState<PublicTeamMember>>(initialFetchState);
+    const [eventsState, setEventsState] = useState<FetchState<PublicEvent>>(initialFetchState);
+    const [projectsState, setProjectsState] = useState<FetchState<PublicProject>>(initialFetchState);
+
+    const [joinForm, setJoinForm] = useState<JoinPayload>(emptyJoinForm);
+    const [joinSubmitting, setJoinSubmitting] = useState(false);
+    const [joinMessage, setJoinMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadTeam = async () => {
+            try {
+                const response = await getPublicTeam();
+                if (cancelled) {
+                    return;
+                }
+                setTeamState({ loading: false, error: "", items: response.items || [] });
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+                setTeamState({ loading: false, error: "Failed to load team.", items: [] });
+            }
+        };
+
+        const loadEvents = async () => {
+            try {
+                const response = await getPublicEvents();
+                if (cancelled) {
+                    return;
+                }
+                setEventsState({ loading: false, error: "", items: response.items || [] });
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+                setEventsState({ loading: false, error: "Failed to load events.", items: [] });
+            }
+        };
+
+        const loadProjects = async () => {
+            try {
+                const response = await getPublicProjects();
+                if (cancelled) {
+                    return;
+                }
+                setProjectsState({ loading: false, error: "", items: response.items || [] });
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+                setProjectsState({ loading: false, error: "Failed to load projects.", items: [] });
+            }
+        };
+
+        loadTeam();
+        loadEvents();
+        loadProjects();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const displayedProjects = useMemo(() => projectsState.items.slice(0, 4), [projectsState.items]);
+    const displayedEvents = useMemo(() => eventsState.items.slice(0, 3), [eventsState.items]);
+    const displayedTeam = useMemo(() => teamState.items.slice(0, 8), [teamState.items]);
+
+    const handleJoinChange = (field: keyof JoinPayload, value: string) => {
+        setJoinForm((current) => ({ ...current, [field]: value }));
+    };
+
+    const handleJoinSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        setJoinMessage(null);
+
+        if (!joinForm.name?.trim() || !joinForm.email?.trim()) {
+            setJoinMessage({ type: "error", text: "Name and email are required." });
+            return;
+        }
+
+        setJoinSubmitting(true);
+        try {
+            const response = await submitJoinApplication(joinForm);
+            setJoinMessage({ type: "success", text: response.message || "Application submitted." });
+            setJoinForm(emptyJoinForm);
+        } catch (error) {
+            setJoinMessage({ type: "error", text: "Failed to submit. Please try again." });
+        } finally {
+            setJoinSubmitting(false);
+        }
+    };
+
     return (
         <div id="top" className="relative isolate min-h-screen overflow-x-clip bg-ink-950 text-white">
             <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(14,165,233,0.14),_transparent_24%),linear-gradient(180deg,_#050816_0%,_#050816_45%,_#080d1a_100%)]" />
@@ -242,43 +387,90 @@ function App() {
                     </Reveal>
 
                     <div className="mt-10 grid gap-5 lg:grid-cols-2">
-                        {projects.map((project, index) => (
-                            <Reveal
-                                key={project.title}
-                                delay={index * 0.05}
-                                className="group min-w-0 rounded-[1.9rem] border border-white/10 bg-white/5 p-5 transition duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-white/[0.07] sm:p-6"
-                            >
-                                <div className={`relative rounded-[1.5rem] border border-white/10 bg-gradient-to-br ${project.accent} p-5`}>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <project.icon className="h-6 w-6 text-cyan-200 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-105" />
-                                            <h3 className="mt-5 break-words font-display text-2xl font-semibold text-white">{project.title}</h3>
-                                        </div>
-                                        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
-                                            Featured
-                                        </span>
-                                    </div>
-
-                                    <p className="mt-4 max-w-xl break-words text-sm leading-7 text-slate-200">{project.summary}</p>
-
-                                    <div className="mt-5 flex flex-wrap gap-2">
-                                        {project.tags.map((tag) => (
-                                            <span key={tag} className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-
-                                    <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-                                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Case Study</span>
-                                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50">
-                                            View build story
-                                            <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                        </span>
-                                    </div>
+                        {projectsState.loading ? (
+                            Array.from({ length: 2 }).map((_, index) => (
+                                <div key={index} className="rounded-[1.9rem] border border-white/10 bg-white/5 p-6">
+                                    <div className="h-4 w-20 animate-pulse rounded bg-white/10" />
+                                    <div className="mt-5 h-7 w-2/3 animate-pulse rounded bg-white/10" />
+                                    <div className="mt-4 h-16 animate-pulse rounded bg-white/10" />
                                 </div>
-                            </Reveal>
-                        ))}
+                            ))
+                        ) : null}
+
+                        {!projectsState.loading && projectsState.error ? (
+                            <div className="rounded-[1.9rem] border border-rose-300/30 bg-rose-400/10 p-6 text-sm text-rose-100 lg:col-span-2">
+                                {projectsState.error}
+                            </div>
+                        ) : null}
+
+                        {!projectsState.loading && !projectsState.error && !displayedProjects.length ? (
+                            <div className="rounded-[1.9rem] border border-white/10 bg-white/5 p-6 text-sm text-slate-300 lg:col-span-2">
+                                No projects have been published yet.
+                            </div>
+                        ) : null}
+
+                        {!projectsState.loading && !projectsState.error
+                            ? displayedProjects.map((project, index) => {
+                                const projectStatus = project.status || "active";
+                                const tags = [projectStatus, project.tech_stack, project.current_lead]
+                                    .filter(Boolean)
+                                    .slice(0, 3) as string[];
+
+                                return (
+                                    <Reveal
+                                        key={project.id}
+                                        delay={index * 0.05}
+                                        className="group min-w-0 rounded-[1.9rem] border border-white/10 bg-white/5 p-5 transition duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-white/[0.07] sm:p-6"
+                                    >
+                                        <div className="relative rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-cyan-500/20 via-sky-500/10 to-transparent p-5">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <Rocket className="h-6 w-6 text-cyan-200 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-105" />
+                                                    <h3 className="mt-5 break-words font-display text-2xl font-semibold text-white">{project.title}</h3>
+                                                </div>
+                                                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
+                                                    {project.featured ? "Featured" : "Project"}
+                                                </span>
+                                            </div>
+
+                                            <p className="mt-4 max-w-xl break-words text-sm leading-7 text-slate-200">
+                                                {project.short_description || project.full_description || "Project from the Dev Cell showcase."}
+                                            </p>
+
+                                            <div className="mt-5 flex flex-wrap gap-2">
+                                                {tags.length
+                                                    ? tags.map((tag) => (
+                                                        <span key={tag} className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">
+                                                            {tag}
+                                                        </span>
+                                                    ))
+                                                    : <span className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">resource</span>}
+                                            </div>
+
+                                            <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Project</span>
+                                                {(project.live_url || project.github_url) ? (
+                                                    <a
+                                                        href={project.live_url || project.github_url || "#"}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50"
+                                                    >
+                                                        Open
+                                                        <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                                    </a>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50">
+                                                        Details
+                                                        <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Reveal>
+                                );
+                            })
+                            : null}
                     </div>
                 </section>
 
@@ -304,23 +496,47 @@ function App() {
                             </div>
 
                             <div className="mt-6 space-y-4">
-                                {events.map((event) => (
-                                    <article
-                                        key={event.title}
-                                        className="rounded-3xl border border-white/10 bg-black/20 p-5 transition hover:border-cyan-400/25 hover:bg-black/25"
-                                    >
-                                        <div className="flex flex-wrap items-center justify-between gap-3">
-                                            <div>
-                                                <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/70">{event.type}</p>
-                                                <h4 className="mt-1 font-display text-xl font-semibold text-white">{event.title}</h4>
-                                            </div>
-                                            <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-200">
-                                                {event.date}
-                                            </span>
+                                {eventsState.loading ? (
+                                    Array.from({ length: 2 }).map((_, index) => (
+                                        <div key={index} className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                                            <div className="h-5 w-24 animate-pulse rounded bg-white/10" />
+                                            <div className="mt-3 h-6 w-3/4 animate-pulse rounded bg-white/10" />
+                                            <div className="mt-3 h-12 animate-pulse rounded bg-white/10" />
                                         </div>
-                                        <p className="mt-3 text-sm leading-7 text-slate-300">{event.summary}</p>
-                                    </article>
-                                ))}
+                                    ))
+                                ) : null}
+
+                                {!eventsState.loading && eventsState.error ? (
+                                    <div className="rounded-3xl border border-rose-300/30 bg-rose-400/10 p-5 text-sm text-rose-100">
+                                        {eventsState.error}
+                                    </div>
+                                ) : null}
+
+                                {!eventsState.loading && !eventsState.error && !displayedEvents.length ? (
+                                    <div className="rounded-3xl border border-white/10 bg-black/20 p-5 text-sm text-slate-300">
+                                        No events are published right now.
+                                    </div>
+                                ) : null}
+
+                                {!eventsState.loading && !eventsState.error
+                                    ? displayedEvents.map((event) => (
+                                        <article
+                                            key={event.id}
+                                            className="rounded-3xl border border-white/10 bg-black/20 p-5 transition hover:border-cyan-400/25 hover:bg-black/25"
+                                        >
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <p className="text-xs uppercase tracking-[0.22em] text-cyan-200/70">{event.organizers || event.type || "Event"}</p>
+                                                    <h4 className="mt-1 font-display text-xl font-semibold text-white">{event.title}</h4>
+                                                </div>
+                                                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-200">
+                                                    {event.date ? formatEventDate(event.date) : "TBA"}
+                                                </span>
+                                            </div>
+                                            <p className="mt-3 text-sm leading-7 text-slate-300">{event.description}</p>
+                                        </article>
+                                    ))
+                                    : null}
                             </div>
                         </Reveal>
 
@@ -364,26 +580,62 @@ function App() {
                     </Reveal>
 
                     <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                        {team.map((member, index) => (
-                            <Reveal key={member.name} delay={index * 0.05} className={`${sectionCardClass} group`}>
-                                <div className="flex min-w-0 items-center gap-4">
-                                    <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/20 to-white/5 font-display text-xl font-semibold text-white transition group-hover:scale-105">
-                                        {member.initials}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="truncate font-display text-lg font-semibold text-white">{member.name}</p>
-                                        <p className="inline-flex w-fit rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-cyan-200">{member.role}</p>
-                                    </div>
+                        {teamState.loading ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                                <div key={index} className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                                    <div className="h-16 w-16 animate-pulse rounded-2xl bg-white/10" />
+                                    <div className="mt-4 h-5 w-2/3 animate-pulse rounded bg-white/10" />
+                                    <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-white/10" />
                                 </div>
-                                <p className="mt-4 text-sm leading-7 text-slate-300">{member.bio}</p>
-                                <div className="mt-6 border-t border-white/10 pt-4">
-                                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-200 transition group-hover:text-cyan-100">
-                                        Meet member
-                                        <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                    </span>
-                                </div>
-                            </Reveal>
-                        ))}
+                            ))
+                        ) : null}
+
+                        {!teamState.loading && teamState.error ? (
+                            <div className="rounded-[1.75rem] border border-rose-300/30 bg-rose-400/10 p-5 text-sm text-rose-100 sm:col-span-2 xl:col-span-4">
+                                {teamState.error}
+                            </div>
+                        ) : null}
+
+                        {!teamState.loading && !teamState.error && !displayedTeam.length ? (
+                            <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-300 sm:col-span-2 xl:col-span-4">
+                                Team members will appear here once added from admin.
+                            </div>
+                        ) : null}
+
+                        {!teamState.loading && !teamState.error
+                            ? displayedTeam.map((member, index) => (
+                                <Reveal key={member.id} delay={index * 0.05} className={`${sectionCardClass} group`}>
+                                    <div className="flex min-w-0 items-center gap-4">
+                                        <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/20 to-white/5 font-display text-xl font-semibold text-white transition group-hover:scale-105">
+                                            {getInitials(member.full_name || "TM")}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="truncate font-display text-lg font-semibold text-white">{member.full_name}</p>
+                                            <p className="inline-flex w-fit rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-cyan-200">{member.role || "Member"}</p>
+                                        </div>
+                                    </div>
+                                    <p className="mt-4 text-sm leading-7 text-slate-300">{member.bio || "Core contributor in the Dev Cell public team."}</p>
+                                    <div className="mt-6 border-t border-white/10 pt-4">
+                                        {member.linkedin_url || member.github_url ? (
+                                            <a
+                                                href={member.linkedin_url || member.github_url || "#"}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="inline-flex items-center gap-2 text-sm font-semibold text-slate-200 transition group-hover:text-cyan-100"
+                                            >
+                                                Profile
+                                                <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                            </a>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-200 transition group-hover:text-cyan-100">
+                                                Meet member
+                                                <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                            </span>
+                                        )}
+                                    </div>
+                                </Reveal>
+                            ))
+                            : null}
                     </div>
                 </section>
 
@@ -490,21 +742,72 @@ function App() {
                                     </div>
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    {[
-                                        { title: "Open to all years", text: "Onboarding that welcomes new members quickly." },
-                                        { title: "API ready", text: "Clean future integration points for forms and dashboards." },
-                                        { title: "Responsive first", text: "Layouts that stay strong across every screen size." },
-                                        { title: "Premium feel", text: "A look and motion language that feels club-worthy." },
-                                    ].map((item, index) => (
-                                        <div
-                                            key={item.title}
-                                            className={`rounded-3xl border border-white/10 bg-black/20 p-5 ${index % 2 === 0 ? "sm:translate-y-3" : ""}`}
-                                        >
-                                            <p className="font-display text-lg font-semibold text-white">{item.title}</p>
-                                            <p className="mt-3 text-sm leading-6 text-slate-300">{item.text}</p>
+                                <div className="grid gap-4">
+                                    <form onSubmit={handleJoinSubmit} className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                                        <p className="font-display text-lg font-semibold text-white">Join Application</p>
+                                        <p className="mt-2 text-sm text-slate-300">Submit this form to apply for Dev Cell.</p>
+
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Name"
+                                                value={joinForm.name || ""}
+                                                onChange={(event) => handleJoinChange("name", event.target.value)}
+                                                className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-slate-400 focus:border-cyan-300/40 focus:outline-none"
+                                                required
+                                            />
+                                            <input
+                                                type="email"
+                                                placeholder="Email"
+                                                value={joinForm.email || ""}
+                                                onChange={(event) => handleJoinChange("email", event.target.value)}
+                                                className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-slate-400 focus:border-cyan-300/40 focus:outline-none"
+                                                required
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Year"
+                                                value={joinForm.year || ""}
+                                                onChange={(event) => handleJoinChange("year", event.target.value)}
+                                                className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-slate-400 focus:border-cyan-300/40 focus:outline-none"
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Interest"
+                                                value={joinForm.interest || ""}
+                                                onChange={(event) => handleJoinChange("interest", event.target.value)}
+                                                className="min-h-11 rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white placeholder:text-slate-400 focus:border-cyan-300/40 focus:outline-none"
+                                            />
                                         </div>
-                                    ))}
+
+                                        <textarea
+                                            placeholder="Message"
+                                            value={joinForm.message || ""}
+                                            onChange={(event) => handleJoinChange("message", event.target.value)}
+                                            className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-sm text-white placeholder:text-slate-400 focus:border-cyan-300/40 focus:outline-none"
+                                        />
+
+                                        <button
+                                            type="submit"
+                                            disabled={joinSubmitting}
+                                            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-cyan-400 px-4 py-2 text-sm font-semibold text-ink-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-70"
+                                        >
+                                            {joinSubmitting ? "Submitting..." : "Submit application"}
+                                        </button>
+
+                                        {joinMessage ? (
+                                            <p className={`mt-3 text-sm ${joinMessage.type === "success" ? "text-emerald-300" : "text-rose-300"}`}>
+                                                {joinMessage.text}
+                                            </p>
+                                        ) : null}
+                                    </form>
+
+                                    <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                                        <p className="font-display text-lg font-semibold text-white">MVP Flow Ready</p>
+                                        <p className="mt-3 text-sm leading-6 text-slate-300">
+                                            Team, events, and resources now load from live backend APIs and this form stores join submissions in MySQL.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
