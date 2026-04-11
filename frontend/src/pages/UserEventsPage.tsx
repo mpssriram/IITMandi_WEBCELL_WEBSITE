@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { CalendarClock, Clock3, MapPin, Search } from "lucide-react";
+import { CalendarClock, Clock3, MapPin, Search, Sparkles, Ticket } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { ElectricCard } from "@/components/ElectricCard";
 import { getPublicEvents, type PublicEvent } from "@/lib/api";
+import { dedupeEvents, eventIdentity } from "@/lib/collections";
 
 type EventTab = "upcoming" | "past";
 
@@ -49,7 +50,7 @@ function EventCard({ eventItem }: { eventItem: PublicEvent }) {
                     {eventItem.type || "event"}
                 </span>
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
-                    {eventItem.status || (isUpcoming(eventItem) ? "upcoming" : "completed")}
+                    {(eventItem.status || (isUpcoming(eventItem) ? "upcoming" : "completed")).replace(/_/g, " ")}
                 </span>
             </div>
 
@@ -86,12 +87,12 @@ export function UserEventsPage() {
     useEffect(() => {
         let mounted = true;
 
-        getPublicEvents(50, 0)
+        getPublicEvents(80, 0)
             .then((response) => {
                 if (!mounted) {
                     return;
                 }
-                setEvents(response.items || []);
+                setEvents(dedupeEvents(response.items || []));
                 setLoading(false);
             })
             .catch(() => {
@@ -109,7 +110,7 @@ export function UserEventsPage() {
 
     const filteredEvents = useMemo(() => {
         const normalizedQuery = query.trim().toLowerCase();
-        const matching = events.filter((eventItem) => {
+        const matching = dedupeEvents(events).filter((eventItem) => {
             const matchesTab = tab === "upcoming" ? isUpcoming(eventItem) : !isUpcoming(eventItem);
             if (!matchesTab) {
                 return false;
@@ -119,7 +120,7 @@ export function UserEventsPage() {
                 return true;
             }
 
-            return [eventItem.title, eventItem.description, eventItem.venue, eventItem.type]
+            return [eventItem.title, eventItem.description, eventItem.venue, eventItem.type, eventItem.status]
                 .filter(Boolean)
                 .some((value) => String(value).toLowerCase().includes(normalizedQuery));
         });
@@ -133,13 +134,21 @@ export function UserEventsPage() {
 
     return (
         <div className="space-y-8">
-            <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-[linear-gradient(135deg,rgba(8,19,40,0.95),rgba(6,14,27,0.9))] p-6 sm:p-8">
-                <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+            <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-[linear-gradient(135deg,rgba(6,18,36,0.95),rgba(4,10,22,0.95))] p-6 sm:p-8">
+                <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.18),transparent_32%),radial-gradient(circle_at_82%_20%,rgba(96,165,250,0.2),transparent_32%),radial-gradient(circle_at_50%_85%,rgba(99,102,241,0.14),transparent_30%)]" />
+                <div className="pointer-events-none absolute right-[-3.5rem] top-[-3.5rem] rounded-full border border-cyan-300/20 bg-cyan-400/10 p-6">
+                    <Ticket className="h-8 w-8 text-cyan-100/75" />
+                </div>
+                <div className="pointer-events-none absolute left-[-2.5rem] bottom-[-2.5rem] rounded-full border border-blue-300/20 bg-blue-400/10 p-5">
+                    <Sparkles className="h-6 w-6 text-blue-100/75" />
+                </div>
+
+                <div className="relative grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
                     <div>
                         <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/75">Events</p>
-                        <h1 className="mt-3 font-display text-3xl font-semibold text-white sm:text-4xl">Upcoming and past event space</h1>
+                        <h1 className="mt-3 font-display text-3xl font-semibold text-white sm:text-4xl">Upcoming and past events</h1>
                         <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                            Browse upcoming opportunities, look back at completed sessions, and keep this page ready for future filters and discovery tools.
+                            Search, filter, and open event details with clear status and registration visibility.
                         </p>
                     </div>
 
@@ -149,7 +158,7 @@ export function UserEventsPage() {
                             <input
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}
-                                placeholder="Search title, venue, or type"
+                                placeholder="Search title, venue, type, or status"
                                 className="w-full bg-transparent text-sm text-white placeholder:text-slate-400 focus:outline-none"
                             />
                         </label>
@@ -183,7 +192,7 @@ export function UserEventsPage() {
                       ))
                     : null}
 
-                {!loading && filteredEvents.map((eventItem) => <EventCard key={eventItem.id} eventItem={eventItem} />)}
+                {!loading && filteredEvents.map((eventItem) => <EventCard key={eventIdentity(eventItem)} eventItem={eventItem} />)}
 
                 {!loading && !filteredEvents.length ? (
                     <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/5 p-8 text-sm text-slate-300 md:col-span-2">
@@ -196,3 +205,4 @@ export function UserEventsPage() {
 }
 
 export default UserEventsPage;
+

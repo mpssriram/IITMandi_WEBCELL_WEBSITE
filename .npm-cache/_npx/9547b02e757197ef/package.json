@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "jsrepo": "^3.7.0"
+  },
+  "_npx": {
+    "packages": [
+      "jsrepo@latest"
+    ]
+  }
+}

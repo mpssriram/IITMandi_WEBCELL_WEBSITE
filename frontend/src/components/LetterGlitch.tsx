@@ -1,35 +1,40 @@
-import { useEffect, useMemo, useState } from "react";
+import type { PropsWithChildren } from "react";
 
-const glyphs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+import ReactBitsLetterGlitch from "@/components/reactbits/LetterGlitch";
 
-interface LetterGlitchProps {
-    text: string;
+type LetterGlitchProps = PropsWithChildren<{
     className?: string;
+    glitchColors?: string[];
+    glitchSpeed?: number;
+    centerVignette?: boolean;
+    outerVignette?: boolean;
+    smooth?: boolean;
+    characters?: string;
+}>;
+
+export function LetterGlitch({
+    className = "",
+    children,
+    glitchColors = ["#103446", "#67e8f9", "#7dd3fc"],
+    glitchSpeed = 55,
+    centerVignette = false,
+    outerVignette = true,
+    smooth = true,
+    characters,
+}: LetterGlitchProps) {
+    return (
+        <div className={`relative overflow-hidden rounded-lg ${className}`}>
+            <ReactBitsLetterGlitch
+                glitchColors={glitchColors}
+                glitchSpeed={glitchSpeed}
+                centerVignette={centerVignette}
+                outerVignette={outerVignette}
+                smooth={smooth}
+                characters={characters || "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$&*()-_+=/[]{};:<>.,0123456789"}
+            />
+            {children ? <div className="pointer-events-none absolute inset-0">{children}</div> : null}
+        </div>
+    );
 }
 
-export function LetterGlitch({ text, className = "" }: LetterGlitchProps) {
-    const chars = useMemo(() => text.split(""), [text]);
-    const [display, setDisplay] = useState(text);
-
-    useEffect(() => {
-        let frame = 0;
-        const id = window.setInterval(() => {
-            frame += 1;
-            if (frame > 7) {
-                setDisplay(text);
-                window.clearInterval(id);
-                return;
-            }
-
-            setDisplay(
-                chars
-                    .map((char, index) => (index < frame ? char : glyphs[(index * 7 + frame * 3) % glyphs.length]))
-                    .join(""),
-            );
-        }, 42);
-
-        return () => window.clearInterval(id);
-    }, [chars, text]);
-
-    return <span className={className}>{display}</span>;
-}
+export default LetterGlitch;

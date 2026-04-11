@@ -200,12 +200,39 @@ class UserService:
             self._close_cursor(cursor)
             self._close_db()
 
-    def list_public_events(self, limit=20, offset=0):
+    def list_public_events(
+        self,
+        limit=20,
+        offset=0,
+        search_title=None,
+        search_organizer=None,
+        search_location=None,
+    ):
         cursor = None
         try:
             cursor = self.db.get_cursor()
+            conditions = []
+            values = []
+
+            if search_title:
+                conditions.append("title LIKE %s")
+                values.append(f"%{str(search_title).strip()}%")
+
+            if search_organizer:
+                conditions.append("(organizers LIKE %s OR speakers LIKE %s)")
+                organizer_value = f"%{str(search_organizer).strip()}%"
+                values.extend([organizer_value, organizer_value])
+
+            if search_location:
+                conditions.append("venue LIKE %s")
+                values.append(f"%{str(search_location).strip()}%")
+
+            where_clause = ""
+            if conditions:
+                where_clause = f"WHERE {' AND '.join(conditions)}"
+
             cursor.execute(
-                """
+                f"""
                 SELECT
                     id,
                     title,
@@ -220,10 +247,11 @@ class UserService:
                     status,
                     featured
                 FROM website_events
+                {where_clause}
                 ORDER BY featured DESC, date DESC, id DESC
                 LIMIT %s OFFSET %s
                 """,
-                (limit, offset),
+                (*values, limit, offset),
             )
             items = cursor.fetchall() or []
             return {"success": True, "items": items, "count": len(items)}
@@ -266,12 +294,43 @@ class UserService:
             self._close_cursor(cursor)
             self._close_db()
 
-    def list_public_resources(self, limit=20, offset=0):
+    def list_public_resources(
+        self,
+        limit=20,
+        offset=0,
+        search_title=None,
+        search_category=None,
+        search_uploaded_by=None,
+        search_type=None,
+    ):
         cursor = None
         try:
             cursor = self.db.get_cursor()
+            conditions = []
+            values = []
+
+            if search_title:
+                conditions.append("title LIKE %s")
+                values.append(f"%{str(search_title).strip()}%")
+
+            if search_category:
+                conditions.append("category LIKE %s")
+                values.append(f"%{str(search_category).strip()}%")
+
+            if search_uploaded_by:
+                conditions.append("uploaded_by LIKE %s")
+                values.append(f"%{str(search_uploaded_by).strip()}%")
+
+            if search_type:
+                conditions.append("LOWER(type) = %s")
+                values.append(str(search_type).strip().lower())
+
+            where_clause = ""
+            if conditions:
+                where_clause = f"WHERE {' AND '.join(conditions)}"
+
             cursor.execute(
-                """
+                f"""
                 SELECT
                     id,
                     title,
@@ -282,10 +341,11 @@ class UserService:
                     uploaded_by,
                     created_at
                 FROM resources
+                {where_clause}
                 ORDER BY created_at DESC
                 LIMIT %s OFFSET %s
                 """,
-                (limit, offset),
+                (*values, limit, offset),
             )
             items = cursor.fetchall() or []
             return {"success": True, "items": items, "count": len(items)}
@@ -350,9 +410,19 @@ class UserService:
             cursor.execute(
                 """
                 SELECT id FROM event_registrations
-                WHERE event_id = %s AND email = %s
+                WHERE event_id = %s
+                  AND (
+                    (email IS NOT NULL AND email = %s)
+                    OR (roll_no IS NOT NULL AND roll_no = %s)
+                    OR notes = %s
+                  )
                 """,
-                (event_id, local_user.get("email")),
+                (
+                    event_id,
+                    local_user.get("email"),
+                    local_user.get("roll_number"),
+                    f"registered_via_firebase_uid={firebase_user.get('uid')}",
+                ),
             )
             if cursor.fetchone():
                 raise HTTPException(

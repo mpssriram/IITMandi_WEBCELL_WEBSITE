@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, type Location } from "react-router-dom";
 
-import App from "./App";
+import App from "@/App";
 import SignupPage from "@/pages/SignupPage";
 import "./index.css";
 
@@ -10,11 +10,10 @@ const LoginPage = lazy(() => import("./pages/LoginPage").then((module) => ({ def
 const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage").then((module) => ({ default: module.AdminLoginPage })));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage").then((module) => ({ default: module.AdminDashboardPage })));
 const UserAreaLayout = lazy(() => import("./layouts/UserAreaLayout").then((module) => ({ default: module.UserAreaLayout })));
-const UserDashboardPage = lazy(() => import("./pages/UserDashboardPage").then((module) => ({ default: module.UserDashboardPage })));
+const UserDashboardPage = lazy(() => import("@/pages/UserDashboardPage").then((module) => ({ default: module.UserDashboardPage })));
 const UserEventsPage = lazy(() => import("./pages/UserEventsPage").then((module) => ({ default: module.UserEventsPage })));
 const UserEventDetailPage = lazy(() => import("./pages/UserEventDetailPage").then((module) => ({ default: module.UserEventDetailPage })));
 const UserResourcesPage = lazy(() => import("./pages/UserResourcesPage").then((module) => ({ default: module.UserResourcesPage })));
-const UserNotificationsPage = lazy(() => import("./pages/UserNotificationsPage").then((module) => ({ default: module.UserNotificationsPage })));
 const UserProfilePage = lazy(() => import("./pages/UserProfilePage").then((module) => ({ default: module.UserProfilePage })));
 
 function AppRouter() {
@@ -37,7 +36,7 @@ function AppRouter() {
                     <Route path="events" element={<UserEventsPage />} />
                     <Route path="events/:id" element={<UserEventDetailPage />} />
                     <Route path="resources" element={<UserResourcesPage />} />
-                    <Route path="notifications" element={<UserNotificationsPage />} />
+                    <Route path="notifications" element={<Navigate to="/user/dashboard" replace state={{ openNotifications: true }} />} />
                 </Route>
                 <Route path="/user/profile" element={<UserProfilePage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />

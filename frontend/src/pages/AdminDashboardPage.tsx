@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { ElectricCard } from "@/components/ElectricCard";
+import { FaultyTerminal } from "@/components/FaultyTerminal";
 import { GridMotion } from "@/components/GridMotion";
+import { LetterGlitch } from "@/components/LetterGlitch";
 import { ScrollStack } from "@/components/ScrollStack";
 import { Stack } from "@/components/Stack";
 import {
@@ -119,7 +121,7 @@ export function AdminDashboardPage() {
                     <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Moderation</p>
                     <h3 className="mt-2 font-display text-xl font-semibold text-white">{application.name}</h3>
                     <p className="mt-2 text-sm leading-7 text-slate-300">
-                        {application.interest || "General interest"} • {application.year || "Year not shared"}
+                        {application.interest || "General interest"} | {application.year || "Year not shared"}
                     </p>
                 </div>
             ),
@@ -145,7 +147,7 @@ export function AdminDashboardPage() {
                     <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Event pipeline</p>
                     <h3 className="mt-2 font-display text-xl font-semibold text-white">{eventItem.title}</h3>
                     <p className="mt-2 text-sm leading-7 text-slate-300">
-                        {eventItem.location || "Venue TBD"} • {eventItem.registered_count || 0} registrations
+                        {eventItem.location || "Venue TBD"} | {eventItem.registered_count || 0} registrations
                     </p>
                 </div>
             ),
@@ -204,6 +206,9 @@ export function AdminDashboardPage() {
     return (
         <div className="relative min-h-screen bg-ink-950 text-white">
             <header className="relative overflow-hidden border-b border-white/10 px-4 py-12 sm:px-6 lg:px-8">
+                <div className="pointer-events-none absolute inset-0 opacity-40">
+                    <FaultyTerminal mouseReact={false} chromaticAberration={0.2} scanlineIntensity={0.48} glitchAmount={0.7} />
+                </div>
                 <GridMotion className="-z-10" />
                 <div className="mx-auto max-w-7xl">
                     <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/80">Admin dashboard</p>
@@ -211,6 +216,13 @@ export function AdminDashboardPage() {
                     <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
                         Manage public content, approvals, and workflow health from one place.
                     </p>
+                    <div className="mt-4 h-8 w-56 overflow-hidden rounded-md border border-cyan-300/25">
+                        <LetterGlitch className="h-full w-full" glitchSpeed={62} outerVignette={false}>
+                            <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-100/90">
+                                LIVE OPS FEED
+                            </span>
+                        </LetterGlitch>
+                    </div>
                 </div>
             </header>
 
@@ -261,7 +273,7 @@ export function AdminDashboardPage() {
                                 dashboard.recent_projects.slice(0, 3).map((project) => (
                                     <p key={project.id}>
                                         {project.title}
-                                        {project.status ? ` • ${project.status}` : ""}
+                                        {project.status ? ` | ${project.status}` : ""}
                                     </p>
                                 ))
                             ) : (
@@ -276,7 +288,7 @@ export function AdminDashboardPage() {
                             {dashboard.recent_team_members.length ? (
                                 dashboard.recent_team_members.slice(0, 3).map((member) => (
                                     <p key={member.id}>
-                                        {member.name} • {member.role}
+                                        {member.name} | {member.role}
                                     </p>
                                 ))
                             ) : (

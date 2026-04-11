@@ -11,7 +11,6 @@ import {
 
 export const navLinks = [
     { label: "About", href: "#about" },
-    { label: "Tracks", href: "#tracks" },
     { label: "Projects", href: "#projects" },
     { label: "Events", href: "#events" },
     { label: "Team", href: "#team" },

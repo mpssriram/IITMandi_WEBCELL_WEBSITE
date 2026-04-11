@@ -99,6 +99,7 @@ export type PublicEvent = {
     date?: string | null;
     venue?: string | null;
     registration_link?: string | null;
+    registration_url?: string | null;
     poster_image_url?: string | null;
     speakers?: string | null;
     organizers?: string | null;
@@ -114,6 +115,19 @@ export type PublicResource = {
     url: string;
     category?: string | null;
     uploaded_by?: string | null;
+};
+
+export type PublicEventQuery = {
+    search_title?: string;
+    search_organizer?: string;
+    search_location?: string;
+};
+
+export type PublicResourceQuery = {
+    search_title?: string;
+    search_category?: string;
+    search_uploaded_by?: string;
+    search_type?: string;
 };
 
 export type AdminDashboardCounts = {
@@ -226,16 +240,16 @@ export function getPublicFormerLeads(limit = 20, offset = 0) {
     return request<ListResponse<PublicFormerLead>>(`/user/former-leads${buildQuery({ limit, offset })}`);
 }
 
-export function getPublicEvents(limit = 20, offset = 0) {
-    return request<ListResponse<PublicEvent>>(`/user/events${buildQuery({ limit, offset })}`);
+export function getPublicEvents(limit = 20, offset = 0, filters: PublicEventQuery = {}) {
+    return request<ListResponse<PublicEvent>>(`/user/events${buildQuery({ limit, offset, ...filters })}`);
 }
 
 export function getPublicEvent(eventId: number) {
     return request<PublicEvent>(`/user/events/${eventId}`);
 }
 
-export function getPublicResources(limit = 20, offset = 0) {
-    return request<ListResponse<PublicResource>>(`/user/resources${buildQuery({ limit, offset })}`);
+export function getPublicResources(limit = 20, offset = 0, filters: PublicResourceQuery = {}) {
+    return request<ListResponse<PublicResource>>(`/user/resources${buildQuery({ limit, offset, ...filters })}`);
 }
 
 export function submitJoinApplication(payload: JoinPayload) {

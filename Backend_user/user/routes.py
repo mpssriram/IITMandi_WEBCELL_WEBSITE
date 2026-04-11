@@ -86,10 +86,14 @@ def get_public_events(
     search_organizer: Optional[str] = None,
     search_location: Optional[str] = None,
 ):
-    # Keep query arguments accepted for compatibility; public listing currently ignores filters.
-    _ = (search_title, search_organizer, search_location)
     service = UserService()
-    return service.list_public_events(limit=limit, offset=offset)
+    return service.list_public_events(
+        limit=limit,
+        offset=offset,
+        search_title=search_title,
+        search_organizer=search_organizer,
+        search_location=search_location,
+    )
 
 
 @router.get("/events/{event_id}")
@@ -116,9 +120,15 @@ def list_resources(
     search_uploaded_by: Optional[str] = None,
     search_type: Optional[str] = None,
 ):
-    _ = (search_title, search_category, search_uploaded_by, search_type)
     service = UserService()
-    return service.list_public_resources(limit=limit, offset=offset)
+    return service.list_public_resources(
+        limit=limit,
+        offset=offset,
+        search_title=search_title,
+        search_category=search_category,
+        search_uploaded_by=search_uploaded_by,
+        search_type=search_type,
+    )
 
 
 @router.get("/resources/{resource_id}")

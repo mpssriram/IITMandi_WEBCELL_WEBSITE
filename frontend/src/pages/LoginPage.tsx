@@ -32,7 +32,7 @@ export function LoginPage() {
     };
 
     const normalizeAuthError = (error: unknown, fallback: string) => {
-        const { code, errorMessage } = getFirebaseErrorDetails(error);
+        const { code } = getFirebaseErrorDetails(error);
 
         if (code === "auth/popup-blocked") {
             return "Popup was blocked by the browser. Redirecting to Google sign-in...";
@@ -67,10 +67,6 @@ export function LoginPage() {
         }
         if (code === "auth/internal-error") {
             return "Firebase returned an internal error. Verify Firebase Email/Password provider and project configuration.";
-        }
-
-        if (errorMessage) {
-            return errorMessage;
         }
 
         return fallback;
@@ -162,19 +158,9 @@ export function LoginPage() {
         setSubmitting(true);
 
         const normalizedEmail = email.trim();
-        console.info("[auth] email/password submit started", {
-            email: normalizedEmail,
-            provider: "password",
-            hasPassword: Boolean(password),
-        });
 
         try {
-            console.info("[auth] calling signInWithEmailAndPassword");
             const credential = await signInWithEmailAndPassword(auth, normalizedEmail, password);
-            console.info("[auth] signInWithEmailAndPassword success", {
-                uid: credential.user?.uid,
-                email: credential.user?.email,
-            });
 
             const token = await credential.user.getIdToken();
             localStorage.setItem("devcell_id_token", token);
@@ -182,11 +168,6 @@ export function LoginPage() {
         } catch (error) {
             const fallback = "Login failed. Please try again.";
             const details = getFirebaseErrorDetails(error);
-            console.error("[auth] signInWithEmailAndPassword error", {
-                code: details.code,
-                message: details.errorMessage,
-                customData: details.customData,
-            });
 
             if (details.code === "auth/user-not-found") {
                 setMessage({ type: "error", text: normalizeAuthError(error, fallback) });
@@ -362,7 +343,7 @@ export function LoginPage() {
                                                 <div className="mb-5 flex items-center gap-2">
                                                     <span className="h-2.5 w-2.5 rounded-full bg-rose-400/80" />
                                                     <span className="h-2.5 w-2.5 rounded-full bg-amber-300/80" />
-                                                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+                                                    <span className="h-2.5 w-2.5 rounded-full bg-cyan-300/80" />
                                                 </div>
 
                                                 <div className="overflow-hidden rounded-[1.2rem] border border-white/10 bg-[linear-gradient(180deg,rgba(6,15,28,0.94),rgba(4,9,18,0.98))] px-8 py-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">

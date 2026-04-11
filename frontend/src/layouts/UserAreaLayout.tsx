@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Bell, ChevronRight, LogOut } from "lucide-react";
+import { Bell, BookOpen, CalendarDays, ChevronDown, ChevronRight, FolderKanban, LogOut, UserCircle } from "lucide-react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
@@ -15,6 +15,7 @@ import {
     type PublicResource,
     type UserProfile,
 } from "@/lib/api";
+import { dedupeEvents, dedupeResources } from "@/lib/collections";
 import { auth } from "@/lib/firebase";
 
 export type UserNotification = {
@@ -79,8 +80,11 @@ export function UserAreaLayout() {
     const [previewEvents, setPreviewEvents] = useState<PublicEvent[]>([]);
     const [previewResources, setPreviewResources] = useState<PublicResource[]>([]);
     const [isNotificationsPanelOpen, setIsNotificationsPanelOpen] = useState(false);
+    const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
     const notificationsPanelRef = useRef<HTMLDivElement | null>(null);
     const notificationButtonRef = useRef<HTMLButtonElement | null>(null);
+    const quickMenuRef = useRef<HTMLDivElement | null>(null);
+    const quickMenuButtonRef = useRef<HTMLButtonElement | null>(null);
 
     const refreshProfile = async () => {
         const nextToken = localStorage.getItem("devcell_id_token");
@@ -133,8 +137,8 @@ export function UserAreaLayout() {
 
             setToken(storedToken);
             setProfile(userProfileResult.status === "fulfilled" ? userProfileResult.value : sessionUser);
-            setPreviewEvents(eventsResult.status === "fulfilled" ? eventsResult.value.items || [] : []);
-            setPreviewResources(resourcesResult.status === "fulfilled" ? resourcesResult.value.items || [] : []);
+            setPreviewEvents(eventsResult.status === "fulfilled" ? dedupeEvents(eventsResult.value.items || []) : []);
+            setPreviewResources(resourcesResult.status === "fulfilled" ? dedupeResources(resourcesResult.value.items || []) : []);
             setLoading(false);
         };
 
@@ -237,7 +241,40 @@ export function UserAreaLayout() {
         };
     }, [isNotificationsPanelOpen]);
 
+    useEffect(() => {
+        if (!isQuickMenuOpen) {
+            return;
+        }
+
+        const handlePointerDown = (event: MouseEvent) => {
+            const targetNode = event.target as Node;
+            const insidePanel = quickMenuRef.current?.contains(targetNode);
+            const insideButton = quickMenuButtonRef.current?.contains(targetNode);
+
+            if (insidePanel || insideButton) {
+                return;
+            }
+
+            setIsQuickMenuOpen(false);
+        };
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setIsQuickMenuOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handlePointerDown);
+        document.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            document.removeEventListener("mousedown", handlePointerDown);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [isQuickMenuOpen]);
+
     const openNotifications = () => {
+        setIsQuickMenuOpen(false);
         setIsNotificationsPanelOpen(true);
     };
 
@@ -246,6 +283,7 @@ export function UserAreaLayout() {
     };
 
     const openProfile = () => {
+        setIsQuickMenuOpen(false);
         closeNotifications();
         navigate("/user/profile", {
             state: {
@@ -256,6 +294,7 @@ export function UserAreaLayout() {
 
     const openNotificationTarget = (href: string) => {
         closeNotifications();
+        setIsQuickMenuOpen(false);
         if (href === "/user/profile") {
             openProfile();
             return;
@@ -264,6 +303,7 @@ export function UserAreaLayout() {
     };
 
     const logout = async () => {
+        setIsQuickMenuOpen(false);
         try {
             await signOut(auth);
         } catch {
@@ -317,16 +357,21 @@ export function UserAreaLayout() {
                         </div>
 
                         <div className="flex items-center gap-2 sm:gap-3">
-                            <NavLink
-                                to="/user/notifications"
-                                className="relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200 transition hover:border-cyan-300/35 hover:bg-cyan-400/10"
+                            <button
+                                ref={notificationButtonRef}
+                                type="button"
+                                onClick={() => setIsNotificationsPanelOpen((current) => !current)}
+                                className={`relative inline-flex h-11 w-11 items-center justify-center rounded-2xl border bg-white/5 text-slate-200 transition hover:border-cyan-300/35 hover:bg-cyan-400/10 ${
+                                    isNotificationsPanelOpen ? "border-cyan-300/40" : "border-white/10"
+                                }`}
                                 aria-label="Notifications"
+                                aria-expanded={isNotificationsPanelOpen}
                             >
                                 <Bell className="h-5 w-5" />
                                 {unreadCount ? (
                                     <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.9)]" />
                                 ) : null}
-                            </NavLink>
+                            </button>
 
                             <button
                                 type="button"
@@ -339,6 +384,86 @@ export function UserAreaLayout() {
                                     <p className="truncate text-xs text-slate-400">{profile?.roll_number || profile?.email || "Open profile"}</p>
                                 </div>
                             </button>
+
+                            <div className="relative">
+                                <button
+                                    ref={quickMenuButtonRef}
+                                    type="button"
+                                    onClick={() => setIsQuickMenuOpen((current) => !current)}
+                                    className={`inline-flex h-11 items-center gap-2 rounded-2xl border bg-white/5 px-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/35 hover:bg-cyan-400/10 ${
+                                        isQuickMenuOpen ? "border-cyan-300/40" : "border-white/10"
+                                    }`}
+                                    aria-label="Quick menu"
+                                    aria-expanded={isQuickMenuOpen}
+                                >
+                                    Menu
+                                    <ChevronDown className="h-4 w-4" />
+                                </button>
+
+                                <div
+                                    ref={quickMenuRef}
+                                    className={`absolute right-0 top-[3.2rem] z-50 w-60 rounded-2xl border border-cyan-300/20 bg-[linear-gradient(145deg,rgba(6,17,35,0.98),rgba(4,10,23,0.96))] p-2 shadow-[0_22px_70px_-28px_rgba(8,145,178,0.8)] transition-all ${
+                                        isQuickMenuOpen ? "translate-y-0 opacity-100" : "pointer-events-none -translate-y-1 opacity-0"
+                                    }`}
+                                    role="menu"
+                                    aria-hidden={!isQuickMenuOpen}
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsQuickMenuOpen(false);
+                                            navigate("/user/events");
+                                        }}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                                    >
+                                        <CalendarDays className="h-4 w-4 text-cyan-200" />
+                                        Events
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsQuickMenuOpen(false);
+                                            navigate("/user/resources");
+                                        }}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                                    >
+                                        <BookOpen className="h-4 w-4 text-cyan-200" />
+                                        Resources
+                                    </button>
+                                    <a
+                                        href="/#projects"
+                                        onClick={() => setIsQuickMenuOpen(false)}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                                    >
+                                        <FolderKanban className="h-4 w-4 text-cyan-200" />
+                                        Projects
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={openProfile}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                                    >
+                                        <UserCircle className="h-4 w-4 text-cyan-200" />
+                                        Profile
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={openNotifications}
+                                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/10 hover:text-white"
+                                    >
+                                        <Bell className="h-4 w-4 text-cyan-200" />
+                                        Notifications
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={logout}
+                                        className="mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-rose-100 transition hover:bg-rose-400/20"
+                                    >
+                                        <LogOut className="h-4 w-4" />
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
 
                             <button
                                 type="button"

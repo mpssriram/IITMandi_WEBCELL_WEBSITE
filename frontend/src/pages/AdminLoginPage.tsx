@@ -15,6 +15,25 @@ export function AdminLoginPage() {
     const [submitting, setSubmitting] = useState(false);
     const [errorText, setErrorText] = useState("");
 
+    const normalizeAdminAuthError = (error: unknown) => {
+        const code = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code || "") : "";
+
+        if (code === "auth/invalid-credential" || code === "auth/wrong-password") {
+            return "Invalid admin email or password.";
+        }
+        if (code === "auth/user-not-found") {
+            return "No admin account found for this email.";
+        }
+        if (code === "auth/user-disabled") {
+            return "This account is disabled.";
+        }
+        if (code === "auth/too-many-requests") {
+            return "Too many attempts. Please wait and try again.";
+        }
+
+        return "Admin login failed. Please try again.";
+    };
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setErrorText("");
@@ -50,8 +69,11 @@ export function AdminLoginPage() {
 
             navigate("/admin/dashboard");
         } catch (error) {
-            const message = error instanceof Error ? error.message : "Admin login failed.";
-            setErrorText(message);
+            if (error instanceof Error && error.message === "Admin access required for this dashboard.") {
+                setErrorText("This account is not authorized for admin access.");
+            } else {
+                setErrorText(normalizeAdminAuthError(error));
+            }
         } finally {
             setSubmitting(false);
         }
@@ -67,8 +89,12 @@ export function AdminLoginPage() {
                     <h1 className="mt-3 font-display text-3xl font-semibold text-white">Control Panel Login</h1>
                     <p className="mt-3 text-sm leading-7 text-slate-300">
                         Restricted route for admin workflows.
-                        <span className="ml-2 text-cyan-200/85">
-                            <LetterGlitch text="AUTHORIZED NODES ONLY" className="text-xs uppercase tracking-[0.18em]" />
+                        <span className="ml-2 inline-flex h-7 w-48 items-center overflow-hidden rounded-md border border-cyan-300/20 align-middle">
+                            <LetterGlitch className="h-full w-full" glitchSpeed={65} outerVignette={false}>
+                                <span className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase tracking-[0.2em] text-cyan-100/90">
+                                    AUTHORIZED NODES ONLY
+                                </span>
+                            </LetterGlitch>
                         </span>
                     </p>
 

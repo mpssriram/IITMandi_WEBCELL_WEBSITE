@@ -7,6 +7,16 @@
 @layer base {
     :root {
         color-scheme: dark;
+        --theme-bg-base: #030711;
+        --theme-bg-elevated: #071225;
+        --theme-panel-soft: rgba(255, 255, 255, 0.045);
+        --theme-text-primary: #f4f9ff;
+        --theme-text-muted: #afbdd5;
+        --theme-accent-cyan: #67e8f9;
+        --theme-accent-blue: #60a5fa;
+        --theme-accent-violet: #a78bfa;
+        --theme-border-soft: rgba(181, 200, 232, 0.22);
+        --theme-glow-cyan: 0 24px 70px -35px rgba(34, 211, 238, 0.38);
     }
 
     html {
@@ -59,7 +69,7 @@
     }
 
     ::selection {
-        background: rgba(34, 211, 238, 0.35);
+        background: rgba(96, 165, 250, 0.35);
         color: #f8fafc;
     }
 }
@@ -71,6 +81,12 @@
 
     .text-balance {
         text-wrap: balance;
+    }
+
+    .theme-surface {
+        background: linear-gradient(145deg, rgba(9, 20, 39, 0.88), rgba(5, 10, 24, 0.92));
+        border: 1px solid var(--theme-border-soft);
+        box-shadow: var(--theme-glow-cyan);
     }
 }
 
@@ -90,26 +106,6 @@
     }
 }
 
-@keyframes fault-scan {
-    0% {
-        transform: translateX(0);
-    }
-
-    100% {
-        transform: translateX(280vw);
-    }
-}
-
-@keyframes grid-slide {
-    0% {
-        transform: translateX(-45vw);
-    }
-
-    100% {
-        transform: translateX(145vw);
-    }
-}
-
 @keyframes anti-rise {
 
     0%,
@@ -121,22 +117,6 @@
     50% {
         transform: translateY(-150px);
         opacity: 0.85;
-    }
-}
-
-@keyframes resource-scan {
-    0% {
-        transform: translateY(-110%);
-        opacity: 0;
-    }
-
-    20% {
-        opacity: 0.5;
-    }
-
-    100% {
-        transform: translateY(560%);
-        opacity: 0;
     }
 }
 
@@ -169,10 +149,5 @@
         transform-origin: center top;
         animation: login-hyperspeed linear infinite;
         will-change: transform, opacity, filter;
-    }
-
-    .resource-scan-line {
-        background: linear-gradient(180deg, rgba(103, 232, 249, 0), rgba(103, 232, 249, 0.18), rgba(103, 232, 249, 0));
-        animation: resource-scan 7s linear infinite;
     }
 }

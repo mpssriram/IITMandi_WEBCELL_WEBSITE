@@ -31,7 +31,16 @@ export function SignupPage() {
         try {
             const payload = (await response.json()) as { detail?: string; message?: string };
             const detail = payload?.detail || payload?.message;
-            return detail || "Account created, but we could not start your session.";
+
+            if (!detail) {
+                return "Account created, but we could not start your session.";
+            }
+
+            if (detail.toLowerCase().includes("firebase") || detail.toLowerCase().includes("token")) {
+                return "Your account was created, but session verification failed. Please sign in again.";
+            }
+
+            return "Your account was created, but we could not complete setup right now.";
         } catch {
             return "Account created, but we could not start your session.";
         }
@@ -82,29 +91,15 @@ export function SignupPage() {
         }
 
         setSubmitting(true);
-        console.info("[auth] signup submit started", { email: normalizedEmail, provider: "password" });
 
         try {
-            console.info("[auth] calling createUserWithEmailAndPassword");
             const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
-            console.info("[auth] createUserWithEmailAndPassword success", {
-                uid: credential.user?.uid,
-                email: credential.user?.email,
-            });
 
             const token = await credential.user.getIdToken();
             localStorage.setItem("devcell_id_token", token);
             await verifySessionAndRedirect(token);
         } catch (error) {
             const code = typeof error === "object" && error && "code" in error ? String((error as { code?: string }).code || "") : "";
-            const errMessage = typeof error === "object" && error && "message" in error ? String((error as { message?: string }).message || "") : "";
-            const customData = typeof error === "object" && error && "customData" in error ? (error as { customData?: unknown }).customData : undefined;
-
-            console.error("[auth] createUserWithEmailAndPassword error", {
-                code,
-                message: errMessage,
-                customData,
-            });
 
             if (code === "auth/email-already-in-use") {
                 setMessage({ type: "error", text: "This email already has an account. Please sign in instead." });
@@ -117,7 +112,7 @@ export function SignupPage() {
             } else if (code === "auth/internal-error") {
                 setMessage({ type: "error", text: "Firebase returned an internal error. Check Firebase Email/Password provider configuration." });
             } else {
-                setMessage({ type: "error", text: errMessage || "Signup failed. Please try again." });
+                setMessage({ type: "error", text: "Signup failed. Please try again." });
             }
         } finally {
             setSubmitting(false);
