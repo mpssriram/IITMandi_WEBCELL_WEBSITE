@@ -1,14 +1,8 @@
 __pycache__/
-<<<<<<< Updated upstream
-=======
-.env
-config.yaml
-
-__pycache__/
->>>>>>> Stashed changes
 *.pyc
+*.pyo
+*.pyd
 .env
+venv/
 config.yaml
 firebase-adminsdk.json
-uploads/
-resources/

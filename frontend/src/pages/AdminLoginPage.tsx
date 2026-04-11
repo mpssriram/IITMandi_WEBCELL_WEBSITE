@@ -35,6 +35,19 @@ export function AdminLoginPage() {
                 throw new Error("Session validation failed.");
             }
 
+            const payload = (await response.json()) as {
+                user?: {
+                    admin?: boolean;
+                    role?: string;
+                };
+            };
+
+            const isAdmin = Boolean(payload?.user?.admin) || payload?.user?.role === "admin";
+            if (!isAdmin) {
+                localStorage.removeItem("devcell_id_token");
+                throw new Error("Admin access required for this dashboard.");
+            }
+
             navigate("/admin/dashboard");
         } catch (error) {
             const message = error instanceof Error ? error.message : "Admin login failed.";

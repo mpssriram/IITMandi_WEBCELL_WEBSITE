@@ -49,6 +49,12 @@ def get_dashboard_counts():
     return _handle_service_result(dashboard.get_dashboard_counts())
 
 
+@router.get("/dashboard")
+def get_admin_dashboard(limit: int = Query(default=5, ge=1, le=20)):
+    dashboard = DashboardManagement()
+    return _handle_service_result(dashboard.get_admin_dashboard(recent_limit=limit))
+
+
 @router.get("/events")
 def get_events(
     limit: int = Query(default=10, ge=1),

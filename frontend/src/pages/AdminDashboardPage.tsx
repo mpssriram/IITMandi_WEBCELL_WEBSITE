@@ -4,20 +4,40 @@ import { ElectricCard } from "@/components/ElectricCard";
 import { GridMotion } from "@/components/GridMotion";
 import { ScrollStack } from "@/components/ScrollStack";
 import { Stack } from "@/components/Stack";
-import { API_BASE_URL } from "@/lib/api";
+import {
+    API_BASE_URL,
+    getAdminDashboard,
+    type AdminDashboardData,
+} from "@/lib/api";
 import { Activity, ArrowRight, BarChart3, ClipboardList, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-const stats = [
-    { label: "Open submissions", value: "24" },
-    { label: "Published projects", value: "17" },
-    { label: "Pending events", value: "5" },
-    { label: "Team updates", value: "11" },
-];
+const emptyDashboard: AdminDashboardData = {
+    counts: {
+        total_events: 0,
+        upcoming_events: 0,
+        past_events: 0,
+        total_resources: 0,
+        total_team_members: 0,
+        total_public_team_members: 0,
+        total_projects: 0,
+        total_join_applications: 0,
+        total_registrations: 0,
+        full_events: 0,
+        events_with_no_registrations: 0,
+    },
+    recent_events: [],
+    recent_resources: [],
+    recent_projects: [],
+    recent_team_members: [],
+    recent_join_applications: [],
+};
 
 export function AdminDashboardPage() {
     const navigate = useNavigate();
     const [authorized, setAuthorized] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [dashboard, setDashboard] = useState<AdminDashboardData>(emptyDashboard);
 
     useEffect(() => {
         let mounted = true;
@@ -27,7 +47,7 @@ export function AdminDashboardPage() {
             return;
         }
 
-        const validate = async () => {
+        const validateAndLoad = async () => {
             const response = await fetch(`${API_BASE_URL}/me`, {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -44,14 +64,35 @@ export function AdminDashboardPage() {
                 return;
             }
 
+            const payload = (await response.json()) as {
+                user?: {
+                    role?: string;
+                };
+            };
+
+            const isAdmin = payload?.user?.role === "admin";
+            if (!isAdmin) {
+                localStorage.removeItem("devcell_id_token");
+                navigate("/admin/login", { replace: true });
+                return;
+            }
+
+            const dashboardResponse = await getAdminDashboard(token, 5);
+            if (!mounted) {
+                return;
+            }
+
+            setDashboard(dashboardResponse.data || emptyDashboard);
             setAuthorized(true);
+            setLoading(false);
         };
 
-        validate().catch(() => {
+        validateAndLoad().catch(() => {
             if (!mounted) {
                 return;
             }
             localStorage.removeItem("devcell_id_token");
+            setLoading(false);
             navigate("/admin/login", { replace: true });
         });
 
@@ -60,45 +101,105 @@ export function AdminDashboardPage() {
         };
     }, [navigate]);
 
-    if (!authorized) {
-        return <div className="min-h-screen bg-ink-950" />;
-    }
+    const stats = useMemo(
+        () => [
+            { label: "Join submissions", value: String(dashboard.counts.total_join_applications) },
+            { label: "Published projects", value: String(dashboard.counts.total_projects) },
+            { label: "Upcoming events", value: String(dashboard.counts.upcoming_events) },
+            { label: "Registrations", value: String(dashboard.counts.total_registrations) },
+        ],
+        [dashboard],
+    );
 
-    const workflowItems = useMemo(
+    const workflowItems = useMemo(() => {
+        const applicationCards = dashboard.recent_join_applications.slice(0, 2).map((application) => ({
+            id: `app-${application.id}`,
+            content: (
+                <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Moderation</p>
+                    <h3 className="mt-2 font-display text-xl font-semibold text-white">{application.name}</h3>
+                    <p className="mt-2 text-sm leading-7 text-slate-300">
+                        {application.interest || "General interest"} • {application.year || "Year not shared"}
+                    </p>
+                </div>
+            ),
+        }));
+
+        const projectCards = dashboard.recent_projects.slice(0, 1).map((project) => ({
+            id: `project-${project.id}`,
+            content: (
+                <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Content ops</p>
+                    <h3 className="mt-2 font-display text-xl font-semibold text-white">{project.title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-slate-300">
+                        {project.short_description || `${project.status || "active"} project ready for review.`}
+                    </p>
+                </div>
+            ),
+        }));
+
+        const eventCards = dashboard.recent_events.slice(0, 1).map((eventItem) => ({
+            id: `event-${eventItem.id}`,
+            content: (
+                <div>
+                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Event pipeline</p>
+                    <h3 className="mt-2 font-display text-xl font-semibold text-white">{eventItem.title}</h3>
+                    <p className="mt-2 text-sm leading-7 text-slate-300">
+                        {eventItem.location || "Venue TBD"} • {eventItem.registered_count || 0} registrations
+                    </p>
+                </div>
+            ),
+        }));
+
+        return [...applicationCards, ...projectCards, ...eventCards];
+    }, [dashboard]);
+
+    const moduleItems = useMemo(
         () => [
             {
-                id: "w1",
+                id: "m1",
                 content: (
                     <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Moderation</p>
-                        <h3 className="mt-2 font-display text-xl font-semibold text-white">Review join applications</h3>
-                        <p className="mt-2 text-sm leading-7 text-slate-300">Validate student details and keep status feedback quick.</p>
+                        <ClipboardList className="h-5 w-5 text-cyan-300" />
+                        <p className="mt-3 text-sm font-semibold text-white">
+                            {dashboard.recent_join_applications[0]?.name || "Applications queue"}
+                        </p>
                     </div>
                 ),
             },
             {
-                id: "w2",
+                id: "m2",
                 content: (
                     <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Content ops</p>
-                        <h3 className="mt-2 font-display text-xl font-semibold text-white">Update public showcase cards</h3>
-                        <p className="mt-2 text-sm leading-7 text-slate-300">Refresh projects and former leads with consistent metadata.</p>
+                        <BarChart3 className="h-5 w-5 text-cyan-300" />
+                        <p className="mt-3 text-sm font-semibold text-white">
+                            {dashboard.recent_projects[0]?.title || "Project insights"}
+                        </p>
                     </div>
                 ),
             },
             {
-                id: "w3",
+                id: "m3",
                 content: (
                     <div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Event pipeline</p>
-                        <h3 className="mt-2 font-display text-xl font-semibold text-white">Publish event timeline</h3>
-                        <p className="mt-2 text-sm leading-7 text-slate-300">Keep posters, registrations, and venues synchronized.</p>
+                        <Activity className="h-5 w-5 text-cyan-300" />
+                        <p className="mt-3 text-sm font-semibold text-white">
+                            {dashboard.recent_events[0]?.title || "Event pulse"}
+                        </p>
                     </div>
                 ),
             },
         ],
-        [],
+        [dashboard],
     );
+
+    if (!authorized) {
+        return (
+            <div className="grid min-h-screen place-items-center bg-ink-950 px-4 text-center text-slate-300">
+                <p className="text-sm">{loading ? "Loading admin dashboard..." : "Redirecting to admin login..."}</p>
+            </div>
+        );
+    }
 
     return (
         <div className="relative min-h-screen bg-ink-950 text-white">
@@ -128,46 +229,61 @@ export function AdminDashboardPage() {
                         <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Activity workflow</p>
                         <h2 className="mt-3 font-display text-2xl font-semibold text-white">Stacked admin actions</h2>
                         <div className="mt-6">
-                            <ScrollStack items={workflowItems} />
+                            <ScrollStack items={workflowItems.length ? workflowItems : moduleItems} />
                         </div>
                     </div>
 
                     <div>
                         <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/75">Module previews</p>
                         <h2 className="mt-3 font-display text-2xl font-semibold text-white">Quick modules</h2>
-                        <Stack
-                            className="mt-6"
-                            items={[
-                                {
-                                    id: "m1",
-                                    content: (
-                                        <div>
-                                            <ClipboardList className="h-5 w-5 text-cyan-300" />
-                                            <p className="mt-3 text-sm font-semibold text-white">Applications queue</p>
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    id: "m2",
-                                    content: (
-                                        <div>
-                                            <BarChart3 className="h-5 w-5 text-cyan-300" />
-                                            <p className="mt-3 text-sm font-semibold text-white">Engagement metrics</p>
-                                        </div>
-                                    ),
-                                },
-                                {
-                                    id: "m3",
-                                    content: (
-                                        <div>
-                                            <Activity className="h-5 w-5 text-cyan-300" />
-                                            <p className="mt-3 text-sm font-semibold text-white">Event pulse</p>
-                                        </div>
-                                    ),
-                                },
-                            ]}
-                        />
+                        <Stack className="mt-6" items={moduleItems} />
                     </div>
+                </section>
+
+                <section className="grid gap-4 lg:grid-cols-3">
+                    <ElectricCard intensity="soft" className="p-5">
+                        <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/70">Recent resources</p>
+                        <div className="mt-3 space-y-2 text-sm text-slate-300">
+                            {dashboard.recent_resources.length ? (
+                                dashboard.recent_resources.slice(0, 3).map((resource) => (
+                                    <p key={resource.id}>{resource.title}</p>
+                                ))
+                            ) : (
+                                <p>No resources available.</p>
+                            )}
+                        </div>
+                    </ElectricCard>
+
+                    <ElectricCard intensity="soft" className="p-5">
+                        <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/70">Recent projects</p>
+                        <div className="mt-3 space-y-2 text-sm text-slate-300">
+                            {dashboard.recent_projects.length ? (
+                                dashboard.recent_projects.slice(0, 3).map((project) => (
+                                    <p key={project.id}>
+                                        {project.title}
+                                        {project.status ? ` • ${project.status}` : ""}
+                                    </p>
+                                ))
+                            ) : (
+                                <p>No projects available.</p>
+                            )}
+                        </div>
+                    </ElectricCard>
+
+                    <ElectricCard intensity="soft" className="p-5">
+                        <p className="text-xs uppercase tracking-[0.18em] text-cyan-100/70">Core team snapshot</p>
+                        <div className="mt-3 space-y-2 text-sm text-slate-300">
+                            {dashboard.recent_team_members.length ? (
+                                dashboard.recent_team_members.slice(0, 3).map((member) => (
+                                    <p key={member.id}>
+                                        {member.name} • {member.role}
+                                    </p>
+                                ))
+                            ) : (
+                                <p>No team data available.</p>
+                            )}
+                        </div>
+                    </ElectricCard>
                 </section>
 
                 <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -178,9 +294,15 @@ export function AdminDashboardPage() {
                         </div>
                         <ShieldCheck className="h-7 w-7 text-cyan-300" />
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-slate-300">Use role checks from backend before exposing write actions in production.</p>
-                    <button className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/15">
-                        Open admin APIs
+                    <p className="mt-3 text-sm leading-7 text-slate-300">
+                        Admin routes are unlocked only when Firebase login succeeds and the mapped local user row has role set to admin.
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => window.location.reload()}
+                        className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-2 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-400/15"
+                    >
+                        Refresh admin data
                         <ArrowRight className="h-4 w-4" />
                     </button>
                 </section>

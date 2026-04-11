@@ -1,7 +1,6 @@
-<<<<<<< Updated upstream
 from fastapi import APIRouter, Body, HTTPException, Query, status
 
-from ..Database import Database
+from Backend_user.Database import Database
 from ..admin.ResourceManagement import ResourceManagement
 from .schemas import (
     JoinApplicationRequest,
@@ -11,16 +10,12 @@ from .schemas import (
     PublicListProjectsResponse,
     PublicListTeamResponse,
 )
-=======
-from fastapi import APIRouter
->>>>>>> Stashed changes
 
 
 router = APIRouter(
     prefix="/user",
     tags=["user"],
 )
-<<<<<<< Updated upstream
 
 
 def _extract_items(result: dict, key: str):
@@ -37,7 +32,7 @@ def _extract_items(result: dict, key: str):
     return result.get(key) or []
 
 
-def _fetch_items(query: str, params: tuple = ()):
+def _fetch_items(query: str, params: tuple = ()): 
     db = Database()
     cursor = None
     try:
@@ -267,5 +262,3 @@ def submit_join_application(payload: JoinApplicationRequest = Body(...)):
         if cursor:
             cursor.close()
         db.close()
-=======
->>>>>>> Stashed changes

@@ -1,20 +1,7 @@
-<<<<<<< Updated upstream
-=======
-<<<<<<< HEAD
 from ..Database import Database
 
 
 class DashboardManagement:
-=======
->>>>>>> Stashed changes
-from .base import AdminServiceBase
-
-
-class DashboardManagement(AdminServiceBase):
-<<<<<<< Updated upstream
-=======
->>>>>>> 2f2962dab9d3219bb71e3a0d704e4ebffc7295f2
->>>>>>> Stashed changes
     ROLE_ORDER_SQL = """
         CASE
             WHEN role = 'Head' THEN 1
@@ -29,10 +16,6 @@ class DashboardManagement(AdminServiceBase):
 
     def __init__(self):
         """Set up the dashboard service with the shared database helper."""
-<<<<<<< Updated upstream
-        super().__init__()
-=======
-<<<<<<< HEAD
         self.db = Database()
 
     def _success_response(self, data=None, message=None, **extra):
@@ -76,10 +59,6 @@ class DashboardManagement(AdminServiceBase):
             return False, None, "limit must be greater than 0"
 
         return True, limit, None
-=======
-        super().__init__()
->>>>>>> 2f2962dab9d3219bb71e3a0d704e4ebffc7295f2
->>>>>>> Stashed changes
 
     def get_dashboard_counts(self):
         """Return dashboard totals and extra event insight counts."""
@@ -103,6 +82,23 @@ class DashboardManagement(AdminServiceBase):
 
             cursor.execute("SELECT COUNT(*) AS total_team_members FROM Team")
             total_team_members = (cursor.fetchone() or {}).get("total_team_members") or 0
+
+            cursor.execute("SELECT COUNT(*) AS total_projects FROM projects")
+            total_projects = (cursor.fetchone() or {}).get("total_projects") or 0
+
+            cursor.execute(
+                "SELECT COUNT(*) AS total_public_team_members FROM team_members WHERE active = 1"
+            )
+            total_public_team_members = (
+                cursor.fetchone() or {}
+            ).get("total_public_team_members") or 0
+
+            cursor.execute(
+                "SELECT COUNT(*) AS total_join_applications FROM join_applications"
+            )
+            total_join_applications = (
+                cursor.fetchone() or {}
+            ).get("total_join_applications") or 0
 
             cursor.execute("SELECT COUNT(*) AS total_registrations FROM event_registrations")
             total_registrations = (cursor.fetchone() or {}).get("total_registrations") or 0
@@ -141,6 +137,9 @@ class DashboardManagement(AdminServiceBase):
                 "past_events": int(event_counts.get("past_events") or 0),
                 "total_resources": int(total_resources),
                 "total_team_members": int(total_team_members),
+                "total_public_team_members": int(total_public_team_members),
+                "total_projects": int(total_projects),
+                "total_join_applications": int(total_join_applications),
                 "total_registrations": int(total_registrations),
                 "full_events": int(full_events),
                 "events_with_no_registrations": int(events_with_no_registrations),
@@ -222,6 +221,41 @@ class DashboardManagement(AdminServiceBase):
             self._close_cursor(cursor)
             self._close_db()
 
+    def get_recent_projects(self, limit=5):
+        """Return recently updated projects for dashboard display."""
+        cursor = None
+
+        is_valid, limit, error = self._validate_limit(limit)
+        if not is_valid:
+            return self._error_response(error)
+
+        try:
+            cursor = self.db.get_cursor()
+            cursor.execute(
+                """
+                SELECT
+                    id,
+                    title,
+                    short_description,
+                    status,
+                    current_lead,
+                    featured,
+                    display_order,
+                    updated_at
+                FROM projects
+                ORDER BY featured DESC, display_order ASC, updated_at DESC, id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            projects = cursor.fetchall()
+            return self._success_response(data=projects, recent_projects=projects)
+        except Exception as e:
+            return self._error_response(f"Error getting recent projects: {str(e)}")
+        finally:
+            self._close_cursor(cursor)
+            self._close_db()
+
     def get_recent_team_members(self, limit=5):
         """Return team members in role-priority order for dashboard display."""
         cursor = None
@@ -243,6 +277,36 @@ class DashboardManagement(AdminServiceBase):
             return self._success_response(data=team_members, recent_team_members=team_members)
         except Exception as e:
             return self._error_response(f"Error getting recent team members: {str(e)}")
+        finally:
+            self._close_cursor(cursor)
+            self._close_db()
+
+    def get_recent_join_applications(self, limit=5):
+        """Return the most recent join applications for dashboard display."""
+        cursor = None
+
+        is_valid, limit, error = self._validate_limit(limit)
+        if not is_valid:
+            return self._error_response(error)
+
+        try:
+            cursor = self.db.get_cursor()
+            cursor.execute(
+                """
+                SELECT id, name, email, year, interest, message, created_at
+                FROM join_applications
+                ORDER BY created_at DESC, id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            applications = cursor.fetchall()
+            return self._success_response(
+                data=applications,
+                recent_join_applications=applications,
+            )
+        except Exception as e:
+            return self._error_response(f"Error getting join applications: {str(e)}")
         finally:
             self._close_cursor(cursor)
             self._close_db()
@@ -423,7 +487,9 @@ class DashboardManagement(AdminServiceBase):
         counts_result = self.get_dashboard_counts()
         events_result = self.get_recent_events(recent_limit)
         resources_result = self.get_recent_resources(recent_limit)
+        projects_result = self.get_recent_projects(recent_limit)
         team_result = self.get_recent_team_members(recent_limit)
+        join_applications_result = self.get_recent_join_applications(recent_limit)
         team_roles_result = self.get_team_role_breakdown()
         resource_types_result = self.get_resource_type_breakdown()
         resource_categories_result = self.get_resource_category_breakdown()
@@ -435,7 +501,9 @@ class DashboardManagement(AdminServiceBase):
             counts_result,
             events_result,
             resources_result,
+            projects_result,
             team_result,
+            join_applications_result,
             team_roles_result,
             resource_types_result,
             resource_categories_result,
@@ -450,7 +518,9 @@ class DashboardManagement(AdminServiceBase):
             "counts": counts_result["data"],
             "recent_events": events_result["data"],
             "recent_resources": resources_result["data"],
+            "recent_projects": projects_result["data"],
             "recent_team_members": team_result["data"],
+            "recent_join_applications": join_applications_result["data"],
             "team_role_breakdown": team_roles_result["data"],
             "resource_type_breakdown": resource_types_result["data"],
             "resource_category_breakdown": resource_categories_result["data"],
