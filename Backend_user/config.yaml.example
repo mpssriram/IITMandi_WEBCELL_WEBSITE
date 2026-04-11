@@ -1,0 +1,29 @@
+app:
+  name: "IIT Mandi WebCell Backend"
+  debug: false
+  upload_folder: "uploads"
+
+server:
+  host: "127.0.0.1"
+  port: 5000
+
+auth:
+  jwt_secret: "replace_with_a_strong_secret"
+  jwt_algorithm: "HS256"
+  jwt_expires_in_minutes: 10080
+
+database:
+  type: "mysql"
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: "your_mysql_password"
+  database: "iit_mandi_webcell"
+
+firebase:
+  service_account_path: "firebase-adminsdk.json"
+  storage_bucket: ""
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"

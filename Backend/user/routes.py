@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 from fastapi import APIRouter, Body, HTTPException, Query, status
 
 from ..Database import Database
@@ -10,12 +11,16 @@ from .schemas import (
     PublicListProjectsResponse,
     PublicListTeamResponse,
 )
+=======
+from fastapi import APIRouter
+>>>>>>> Stashed changes
 
 
 router = APIRouter(
     prefix="/user",
     tags=["user"],
 )
+<<<<<<< Updated upstream
 
 
 def _extract_items(result: dict, key: str):
@@ -262,3 +267,5 @@ def submit_join_application(payload: JoinApplicationRequest = Body(...)):
         if cursor:
             cursor.close()
         db.close()
+=======
+>>>>>>> Stashed changes
