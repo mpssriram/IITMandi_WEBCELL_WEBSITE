@@ -1,5 +1,6 @@
 import { Menu, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { navLinks } from "@/data/site";
 
@@ -51,7 +52,13 @@ export function Navbar() {
                     ))}
                 </nav>
 
-                <div className="hidden lg:block">
+                <div className="hidden items-center gap-3 lg:flex">
+                    <Link
+                        to="/login"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:-translate-y-0.5 hover:border-cyan-300/35 hover:bg-cyan-400/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950"
+                    >
+                        Login
+                    </Link>
                     <a
                         href="#join"
                         className="inline-flex min-h-11 items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-5 py-2.5 text-sm font-semibold text-cyan-100 transition hover:-translate-y-0.5 hover:bg-cyan-400/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950"
@@ -92,6 +99,14 @@ export function Navbar() {
                                 {link.label}
                             </a>
                         ))}
+
+                        <Link
+                            to="/login"
+                            onClick={() => setMenuOpen(false)}
+                            className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-base font-semibold text-slate-100 transition hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950"
+                        >
+                            Login
+                        </Link>
 
                         <a
                             href="#join"

@@ -2,6 +2,8 @@ from pathlib import Path
 
 import firebase_admin
 from firebase_admin import auth, credentials
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 try:
     from .config import Config
@@ -59,16 +61,41 @@ class FirebaseService:
         Returns None for invalid tokens.
         Raises FirebaseServiceError for setup-related problems.
         """
-        self.initialize()
-
         try:
+            self.initialize()
             return auth.verify_id_token(token)
+        except FirebaseServiceError:
+            # Fallback for setups where only firebase web config is present.
+            return self._verify_token_without_admin(token)
         except (
             auth.InvalidIdTokenError,
             auth.ExpiredIdTokenError,
             auth.RevokedIdTokenError,
             ValueError,
         ):
+            return None
+        except Exception as exc:
+            raise FirebaseServiceError(f"Failed to verify Firebase token: {exc}") from exc
+
+    def _verify_token_without_admin(self, token: str):
+        """
+        Verify Firebase token using Google's public certs when Admin SDK
+        cannot be initialized from a service-account file.
+        """
+        project_id = (
+            self.config.FIREBASE_WEB_CONFIG.get("projectId")
+            or self.config.FIREBASE_CONFIG_JSON.get("project_id")
+        )
+
+        if not project_id:
+            raise FirebaseServiceError(
+                "Firebase project ID missing. Set firebaseConfig.projectId or use a service account JSON."
+            )
+
+        try:
+            request = google_requests.Request()
+            return google_id_token.verify_firebase_token(token, request, audience=project_id)
+        except ValueError:
             return None
         except Exception as exc:
             raise FirebaseServiceError(f"Failed to verify Firebase token: {exc}") from exc

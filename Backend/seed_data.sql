@@ -1,4 +1,5 @@
 -- Minimal sample seed data for public website sections
+-- Note: This file is for example/demo seeding. Run on a clean DB or adjust as needed.
 
 INSERT INTO projects (
     title,
@@ -45,6 +46,21 @@ VALUES
     'Neha Verma, Rohit Mehta',
     FALSE,
     2
+),
+(
+    'Dev Cell Onboarding Kit',
+    'Starter experience for new members with curated tasks and resources.',
+    'Guided onboarding flow to help new contributors pick domains, complete first tasks, and connect with mentors.',
+    'React, FastAPI, PostgreSQL',
+    NULL,
+    'https://onboarding.example.org',
+    NULL,
+    'planned',
+    'Kunal Singh',
+    'Aarav Sharma',
+    'Kunal Singh, Priya Nair',
+    FALSE,
+    3
 );
 
 INSERT INTO team_members (
@@ -89,6 +105,34 @@ VALUES
     'neha@iitmandi.ac.in',
     TRUE,
     2
+),
+(
+    'Kunal Singh',
+    'Associate Member',
+    'Backend',
+    '2nd Year',
+    'Contributes to API development and test automation.',
+    'Python, FastAPI, SQL',
+    NULL,
+    NULL,
+    'https://github.com/kunal-singh',
+    NULL,
+    TRUE,
+    3
+),
+(
+    'Riya Thakur',
+    'Former Lead',
+    'Leadership',
+    'Alumni',
+    'Mentored core team members and established quality review practices.',
+    'Mentorship, Project Planning',
+    NULL,
+    'https://linkedin.com/in/riya-thakur',
+    'https://github.com/riya-thakur',
+    NULL,
+    FALSE,
+    99
 );
 
 INSERT INTO former_leads (
@@ -123,8 +167,8 @@ VALUES
     '2023-06-30',
     'Workshop CMS, Event Registration Revamp',
     'https://linkedin.com/in/siddhant-jain',
-    'https://github.com/siddhant-jain',
-    'https://images.example.org/siddhant.jpg',
+    NULL,
+    NULL,
     'Established backend conventions and deployment docs.',
     TRUE
 );
@@ -145,7 +189,7 @@ INSERT INTO website_events (
 VALUES
 (
     'Build & Ship Sprint',
-    'Workshop',
+    'workshop',
     'Hands-on sprint to take an idea from wireframe to deployed MVP in one weekend.',
     '2026-04-20',
     'Lecture Hall Complex, IIT Mandi',
@@ -158,7 +202,7 @@ VALUES
 ),
 (
     'Frontend Review Jam',
-    'Peer Review',
+    'showcase',
     'Open review session focused on responsive layouts, accessibility, and interaction quality.',
     '2026-05-02',
     'CSE Seminar Room',

@@ -1,13 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { ArrowRight, ArrowUpRight, ChevronRight, Code2, MonitorSmartphone, Rocket, ShieldCheck, Sparkles, Users2 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { Footer } from "@/components/Footer";
+import { CircularGallery } from "@/components/CircularGallery";
+import { ElectricCard } from "@/components/ElectricCard";
+import { Hyperspeed } from "@/components/Hyperspeed";
 import { Navbar } from "@/components/Navbar";
+import { Prism } from "@/components/Prism";
 import { Reveal } from "@/components/Reveal";
+import { ScrollStack } from "@/components/ScrollStack";
 import { SectionHeading } from "@/components/SectionHeading";
+import ShinyText from "@/components/ShinyText";
 import { StatCounter } from "@/components/StatCounter";
+import TextType from "@/components/TextType";
 import {
     clubHighlights,
     domains,
@@ -18,11 +25,13 @@ import {
 } from "@/data/site";
 import {
     getPublicEvents,
+    getPublicFormerLeads,
     getPublicProjects,
     getPublicTeam,
     submitJoinApplication,
     type JoinPayload,
     type PublicEvent,
+    type PublicFormerLead,
     type PublicProject,
     type PublicTeamMember,
 } from "@/lib/api";
@@ -72,14 +81,36 @@ function getInitials(name: string) {
     return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
 }
 
+function parseChips(value?: string | null) {
+    return (value || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 4);
+}
+
 function App() {
+    const prefersReducedMotion = useReducedMotion();
     const [teamState, setTeamState] = useState<FetchState<PublicTeamMember>>(initialFetchState);
     const [eventsState, setEventsState] = useState<FetchState<PublicEvent>>(initialFetchState);
     const [projectsState, setProjectsState] = useState<FetchState<PublicProject>>(initialFetchState);
+    const [formerLeadsState, setFormerLeadsState] = useState<FetchState<PublicFormerLead>>(initialFetchState);
 
     const [joinForm, setJoinForm] = useState<JoinPayload>(emptyJoinForm);
     const [joinSubmitting, setJoinSubmitting] = useState(false);
     const [joinMessage, setJoinMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [failedImages, setFailedImages] = useState<Record<string, true>>({});
+    const [allowHeroParticles, setAllowHeroParticles] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === "undefined") {
+            return;
+        }
+
+        const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+        const smallScreen = window.innerWidth < 900;
+        setAllowHeroParticles(!prefersReducedMotion && !coarsePointer && !smallScreen);
+    }, [prefersReducedMotion]);
 
     useEffect(() => {
         let cancelled = false;
@@ -129,9 +160,25 @@ function App() {
             }
         };
 
+        const loadFormerLeads = async () => {
+            try {
+                const response = await getPublicFormerLeads();
+                if (cancelled) {
+                    return;
+                }
+                setFormerLeadsState({ loading: false, error: "", items: response.items || [] });
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+                setFormerLeadsState({ loading: false, error: "Failed to load former leads.", items: [] });
+            }
+        };
+
         loadTeam();
         loadEvents();
         loadProjects();
+        loadFormerLeads();
 
         return () => {
             cancelled = true;
@@ -141,10 +188,22 @@ function App() {
     const displayedProjects = useMemo(() => projectsState.items.slice(0, 4), [projectsState.items]);
     const displayedEvents = useMemo(() => eventsState.items.slice(0, 3), [eventsState.items]);
     const displayedTeam = useMemo(() => teamState.items.slice(0, 8), [teamState.items]);
+    const displayedFormerLeads = useMemo(() => formerLeadsState.items.slice(0, 4), [formerLeadsState.items]);
 
     const handleJoinChange = (field: keyof JoinPayload, value: string) => {
         setJoinForm((current) => ({ ...current, [field]: value }));
     };
+
+    const markImageFailed = (key: string) => {
+        setFailedImages((current) => {
+            if (current[key]) {
+                return current;
+            }
+            return { ...current, [key]: true };
+        });
+    };
+
+    const canRenderImage = (key: string, url?: string | null) => Boolean(url) && !failedImages[key];
 
     const handleJoinSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -176,6 +235,10 @@ function App() {
 
             <main className="pb-6 sm:pb-8">
                 <section className="relative mx-auto max-w-[84rem] px-4 pb-14 pt-10 sm:px-6 sm:pb-16 sm:pt-16 lg:px-8 lg:pb-24 lg:pt-24 2xl:max-w-[90rem]">
+                    {allowHeroParticles ? (
+                        <Hyperspeed density={30} className="-z-10 opacity-70" />
+                    ) : null}
+
                     <motion.div
                         className="pointer-events-none absolute right-8 top-8 hidden rounded-full border border-cyan-300/30 bg-cyan-300/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100/90 lg:block"
                         animate={{ y: [0, -8, 0] }}
@@ -193,13 +256,27 @@ function App() {
                         <Reveal className="max-w-3xl">
                             <div className="inline-flex min-h-11 items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100">
                                 <Sparkles className="h-4 w-4" />
-                                Premium web experiences for student builders
+                                <ShinyText
+                                    text="Premium web experiences for student builders"
+                                    speed={4}
+                                    color="#9dd7e7"
+                                    shineColor="#ffffff"
+                                    className="whitespace-nowrap"
+                                />
                             </div>
 
                             <h1 className="mt-6 max-w-4xl font-display text-[clamp(2rem,6.8vw,5.1rem)] font-semibold leading-[1.03] tracking-tight text-white">
-                                A web club that feels like
-                                <span className="bg-gradient-to-r from-cyan-200 via-cyan-300 to-sky-300 bg-clip-text text-transparent">
-                                    {" "}a product studio.
+                                A web club that helps you
+                                <span className="mt-2 block bg-gradient-to-r from-cyan-200 via-cyan-300 to-sky-300 bg-clip-text text-transparent">
+                                    <TextType
+                                        as="span"
+                                        text={["Build with confidence.", "Design with clarity.", "Ship like a studio."]}
+                                        typingSpeed={58}
+                                        deletingSpeed={34}
+                                        pauseDuration={1200}
+                                        cursorClassName="text-cyan-200"
+                                        startOnVisible={true}
+                                    />
                                 </span>
                             </h1>
 
@@ -356,24 +433,26 @@ function App() {
                         />
                     </Reveal>
 
-                    <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                        {domains.map((domain, index) => (
-                            <Reveal key={domain.title} delay={index * 0.05} className={sectionCardClass}>
-                                <domain.icon className="h-6 w-6 text-cyan-300" />
-                                <h3 className="mt-5 font-display text-xl font-semibold text-white">{domain.title}</h3>
-                                <p className="mt-3 text-sm leading-7 text-slate-300">{domain.description}</p>
-                                <div className="mt-5 flex flex-wrap gap-2">
-                                    {domain.bullets.map((bullet) => (
-                                        <span
-                                            key={bullet}
-                                            className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium text-slate-300"
-                                        >
-                                            {bullet}
-                                        </span>
-                                    ))}
-                                </div>
-                            </Reveal>
-                        ))}
+                    <div className="mt-10">
+                        <ScrollStack
+                            items={domains.map((domain) => ({
+                                id: domain.title,
+                                content: (
+                                    <div>
+                                        <domain.icon className="h-6 w-6 text-cyan-300" />
+                                        <h3 className="mt-4 font-display text-xl font-semibold text-white">{domain.title}</h3>
+                                        <p className="mt-2 text-sm leading-7 text-slate-300">{domain.description}</p>
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            {domain.bullets.map((bullet) => (
+                                                <span key={bullet} className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium text-slate-300">
+                                                    {bullet}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ),
+                            }))}
+                        />
                     </div>
                 </section>
 
@@ -411,62 +490,88 @@ function App() {
 
                         {!projectsState.loading && !projectsState.error
                             ? displayedProjects.map((project, index) => {
-                                const projectStatus = project.status || "active";
-                                const tags = [projectStatus, project.tech_stack, project.current_lead]
+                                const projectStatus = (project.status || "active").replace("_", " ");
+                                const tags = [projectStatus, ...parseChips(project.tech_stack)]
                                     .filter(Boolean)
-                                    .slice(0, 3) as string[];
+                                    .slice(0, 4) as string[];
+                                const projectImageKey = `project-${project.id}`;
 
                                 return (
-                                    <Reveal
-                                        key={project.id}
-                                        delay={index * 0.05}
-                                        className="group min-w-0 rounded-[1.9rem] border border-white/10 bg-white/5 p-5 transition duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-white/[0.07] sm:p-6"
-                                    >
-                                        <div className="relative rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-cyan-500/20 via-sky-500/10 to-transparent p-5">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div>
-                                                    <Rocket className="h-6 w-6 text-cyan-200 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-105" />
-                                                    <h3 className="mt-5 break-words font-display text-2xl font-semibold text-white">{project.title}</h3>
-                                                </div>
-                                                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
-                                                    {project.featured ? "Featured" : "Project"}
-                                                </span>
-                                            </div>
-
-                                            <p className="mt-4 max-w-xl break-words text-sm leading-7 text-slate-200">
-                                                {project.short_description || project.full_description || "Project from the Dev Cell showcase."}
-                                            </p>
-
-                                            <div className="mt-5 flex flex-wrap gap-2">
-                                                {tags.length
-                                                    ? tags.map((tag) => (
-                                                        <span key={tag} className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">
-                                                            {tag}
-                                                        </span>
-                                                    ))
-                                                    : <span className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">resource</span>}
-                                            </div>
-
-                                            <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
-                                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Project</span>
-                                                {(project.live_url || project.github_url) ? (
-                                                    <a
-                                                        href={project.live_url || project.github_url || "#"}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50"
-                                                    >
-                                                        Open
-                                                        <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                                                    </a>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50">
-                                                        Details
-                                                        <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                    <Reveal key={project.id} delay={index * 0.05} className="group min-w-0 sm:p-1">
+                                        <ElectricCard className="p-5 sm:p-6">
+                                            <div className="relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-cyan-500/20 via-sky-500/10 to-transparent p-5">
+                                                {canRenderImage(projectImageKey, project.image_url) ? (
+                                                    <img
+                                                        src={project.image_url || ""}
+                                                        alt={project.title}
+                                                        className="absolute inset-0 h-full w-full object-cover opacity-20"
+                                                        loading="lazy"
+                                                        onError={() => markImageFailed(projectImageKey)}
+                                                    />
+                                                ) : null}
+                                                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div>
+                                                        <Rocket className="h-6 w-6 text-cyan-200 transition-transform duration-500 group-hover:rotate-3 group-hover:scale-105" />
+                                                        <h3 className="mt-5 break-words font-display text-2xl font-semibold text-white">{project.title}</h3>
+                                                    </div>
+                                                    <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-300">
+                                                        {project.featured ? "Featured" : "Project"}
                                                     </span>
-                                                )}
+                                                </div>
+
+                                                <p className="mt-4 max-w-xl break-words text-sm leading-7 text-slate-200">
+                                                    {project.short_description || project.full_description || "Project from the Dev Cell showcase."}
+                                                </p>
+
+                                                {project.contributors ? (
+                                                    <p className="mt-3 text-xs uppercase tracking-[0.16em] text-slate-400">Contributors: {project.contributors}</p>
+                                                ) : null}
+
+                                                <div className="mt-3 space-y-1 text-xs text-slate-300">
+                                                    {project.current_lead ? (
+                                                        <p>
+                                                            <span className="font-semibold text-slate-200">Current Lead:</span> {project.current_lead}
+                                                        </p>
+                                                    ) : null}
+                                                    {project.former_leads ? (
+                                                        <p>
+                                                            <span className="font-semibold text-slate-200">Former Leads:</span> {project.former_leads}
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+
+                                                <div className="mt-5 flex flex-wrap gap-2">
+                                                    {tags.length
+                                                        ? tags.map((tag) => (
+                                                            <span key={tag} className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">
+                                                                {tag}
+                                                            </span>
+                                                        ))
+                                                        : <span className="rounded-full bg-black/20 px-3 py-1 text-xs font-medium text-slate-100">resource</span>}
+                                                </div>
+
+                                                <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                                                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Project</span>
+                                                    {(project.live_url || project.github_url) ? (
+                                                        <a
+                                                            href={project.live_url || project.github_url || "#"}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50"
+                                                        >
+                                                            Open
+                                                            <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                                        </a>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-cyan-100 transition group-hover:text-cyan-50">
+                                                            Details
+                                                            <ArrowUpRight className="h-4 w-4 transition-transform duration-500 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
+                                        </ElectricCard>
                                     </Reveal>
                                 );
                             })
@@ -533,7 +638,22 @@ function App() {
                                                     {event.date ? formatEventDate(event.date) : "TBA"}
                                                 </span>
                                             </div>
-                                            <p className="mt-3 text-sm leading-7 text-slate-300">{event.description}</p>
+                                            <p className="mt-3 text-sm leading-7 text-slate-300">{event.description || "Event details will be published soon."}</p>
+                                            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                                                {event.venue ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">{event.venue}</span> : null}
+                                                {event.status ? <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">{event.status}</span> : null}
+                                                {event.registration_link ? (
+                                                    <a
+                                                        href={event.registration_link}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="inline-flex items-center gap-1 rounded-full border border-cyan-300/35 bg-cyan-400/10 px-3 py-1 font-semibold text-cyan-100"
+                                                    >
+                                                        Register
+                                                        <ArrowUpRight className="h-3.5 w-3.5" />
+                                                    </a>
+                                                ) : null}
+                                            </div>
                                         </article>
                                     ))
                                     : null}
@@ -606,8 +726,16 @@ function App() {
                             ? displayedTeam.map((member, index) => (
                                 <Reveal key={member.id} delay={index * 0.05} className={`${sectionCardClass} group`}>
                                     <div className="flex min-w-0 items-center gap-4">
-                                        <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/20 to-white/5 font-display text-xl font-semibold text-white transition group-hover:scale-105">
-                                            {getInitials(member.full_name || "TM")}
+                                        <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/20 to-white/5 font-display text-xl font-semibold text-white transition group-hover:scale-105">
+                                            {canRenderImage(`member-${member.id}`, member.photo_url) ? (
+                                                <img
+                                                    src={member.photo_url || ""}
+                                                    alt={member.full_name}
+                                                    className="h-full w-full object-cover"
+                                                    loading="lazy"
+                                                    onError={() => markImageFailed(`member-${member.id}`)}
+                                                />
+                                            ) : getInitials(member.full_name || "TM")}
                                         </div>
                                         <div className="min-w-0">
                                             <p className="truncate font-display text-lg font-semibold text-white">{member.full_name}</p>
@@ -615,6 +743,13 @@ function App() {
                                         </div>
                                     </div>
                                     <p className="mt-4 text-sm leading-7 text-slate-300">{member.bio || "Core contributor in the Dev Cell public team."}</p>
+                                    <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300">
+                                        {member.team_domain ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">{member.team_domain}</span> : null}
+                                        {member.year ? <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1">{member.year}</span> : null}
+                                        {parseChips(member.skills).map((skill) => (
+                                            <span key={skill} className="rounded-full border border-white/10 bg-black/20 px-3 py-1">{skill}</span>
+                                        ))}
+                                    </div>
                                     <div className="mt-6 border-t border-white/10 pt-4">
                                         {member.linkedin_url || member.github_url ? (
                                             <a
@@ -639,6 +774,79 @@ function App() {
                     </div>
                 </section>
 
+                <section id="former-leads" className="mx-auto max-w-[84rem] border-t border-white/5 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24 2xl:max-w-[90rem]">
+                    <Reveal>
+                        <SectionHeading
+                            eyebrow="Legacy"
+                            title="Former leads who shaped the foundation."
+                            description="A strong public profile should reflect continuity. This section highlights previous owners and their contributions."
+                        />
+                    </Reveal>
+
+                    <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                        {formerLeadsState.loading ? (
+                            Array.from({ length: 4 }).map((_, index) => (
+                                <div key={index} className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+                                    <div className="h-16 w-16 animate-pulse rounded-2xl bg-white/10" />
+                                    <div className="mt-4 h-5 w-2/3 animate-pulse rounded bg-white/10" />
+                                    <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-white/10" />
+                                </div>
+                            ))
+                        ) : null}
+
+                        {!formerLeadsState.loading && formerLeadsState.error ? (
+                            <div className="rounded-[1.75rem] border border-rose-300/30 bg-rose-400/10 p-5 text-sm text-rose-100 md:col-span-2 xl:col-span-4">
+                                {formerLeadsState.error}
+                            </div>
+                        ) : null}
+
+                        {!formerLeadsState.loading && !formerLeadsState.error && !displayedFormerLeads.length ? (
+                            <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 text-sm text-slate-300 md:col-span-2 xl:col-span-4">
+                                Former leads will be displayed here once data is added.
+                            </div>
+                        ) : null}
+
+                        {!formerLeadsState.loading && !formerLeadsState.error
+                            ? displayedFormerLeads.map((lead, index) => (
+                                <Reveal key={lead.id} delay={index * 0.05} className={sectionCardClass}>
+                                    <div className="grid h-14 w-14 place-items-center overflow-hidden rounded-2xl border border-cyan-400/20 bg-gradient-to-br from-cyan-400/20 to-white/5 font-display text-lg font-semibold text-white">
+                                        {canRenderImage(`former-${lead.id}`, lead.photo_url) ? (
+                                            <img
+                                                src={lead.photo_url || ""}
+                                                alt={lead.full_name}
+                                                className="h-full w-full object-cover"
+                                                loading="lazy"
+                                                onError={() => markImageFailed(`former-${lead.id}`)}
+                                            />
+                                        ) : getInitials(lead.full_name)}
+                                    </div>
+                                    <h3 className="mt-4 font-display text-xl font-semibold text-white">{lead.full_name}</h3>
+                                    <p className="mt-1 text-sm text-cyan-100/80">{lead.role_title || "Former Lead"}</p>
+                                    <p className="mt-3 text-sm leading-7 text-slate-300">{lead.short_note || "Contributed significantly to the Dev Cell journey."}</p>
+                                    <div className="mt-4 text-xs uppercase tracking-[0.16em] text-slate-400">
+                                        {lead.tenure_start || "-"} to {lead.tenure_end || "-"}
+                                    </div>
+                                    <div className="mt-5 border-t border-white/10 pt-4">
+                                        {lead.linkedin_url || lead.github_url ? (
+                                            <a
+                                                href={lead.linkedin_url || lead.github_url || "#"}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="inline-flex items-center gap-2 text-sm font-semibold text-slate-200 transition hover:text-cyan-100"
+                                            >
+                                                View profile
+                                                <ArrowUpRight className="h-4 w-4" />
+                                            </a>
+                                        ) : (
+                                            <span className="text-sm text-slate-300">Profile link coming soon</span>
+                                        )}
+                                    </div>
+                                </Reveal>
+                            ))
+                            : null}
+                    </div>
+                </section>
+
                 <section id="gallery" className="mx-auto max-w-[84rem] border-t border-white/5 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24 2xl:max-w-[90rem]">
                     <Reveal>
                         <SectionHeading
@@ -648,35 +856,42 @@ function App() {
                         />
                     </Reveal>
 
-                    <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-                        {galleryHighlights.map((item, index) => (
-                            <Reveal
-                                key={item.title}
-                                delay={index * 0.05}
-                                className="group overflow-hidden rounded-[1.9rem] border border-white/10 bg-white/5"
-                            >
-                                <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-ink-800 via-ink-900 to-black p-5">
-                                    <img
-                                        src={item.image}
-                                        alt={item.title}
-                                        className="absolute inset-0 h-full w-full object-cover object-center opacity-45 transition duration-700 group-hover:scale-110"
-                                        loading="lazy"
-                                        sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 25vw"
-                                    />
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.3),_transparent_40%),linear-gradient(to_top,_rgba(3,7,18,0.82),_rgba(3,7,18,0.25))]" />
-                                    <div className="relative flex h-full flex-col justify-between">
-                                        <span className="inline-flex w-fit rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-slate-300">
-                                            {item.metric}
-                                        </span>
-                                        <div>
-                                            <h3 className="font-display text-2xl font-semibold text-white">{item.title}</h3>
-                                            <p className="mt-3 text-sm leading-6 text-slate-300">{item.caption}</p>
-                                        </div>
-                                    </div>
+                    <Reveal className="mt-10">
+                        <CircularGallery
+                            items={galleryHighlights.map((item) => ({
+                                id: item.title,
+                                title: item.title,
+                                caption: item.caption,
+                                image: item.image,
+                            }))}
+                        />
+                        <div className="mt-8 grid gap-4 md:grid-cols-2">
+                            {galleryHighlights.slice(0, 4).map((item) => (
+                                <div key={item.title} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                    <p className="text-xs uppercase tracking-[0.2em] text-cyan-100/70">{item.metric}</p>
+                                    <p className="mt-2 font-display text-lg font-semibold text-white">{item.title}</p>
+                                    <p className="mt-2 text-sm leading-6 text-slate-300">{item.caption}</p>
                                 </div>
-                            </Reveal>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    </Reveal>
+                </section>
+
+                <section className="mx-auto max-w-[84rem] border-t border-white/5 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20 2xl:max-w-[90rem]">
+                    <Reveal>
+                        <div className="relative overflow-hidden rounded-[2rem] border border-cyan-300/20">
+                            <Prism className="h-[16rem]" />
+                            <div className="absolute inset-0 grid place-items-center p-6 text-center">
+                                <div>
+                                    <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/80">Premium Layer</p>
+                                    <h3 className="mt-3 font-display text-3xl font-semibold text-white sm:text-4xl">Crafted visuals, production behavior.</h3>
+                                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-200 sm:text-base">
+                                        Every effect is tuned for product context with controlled intensity, readable contrast, and safe mobile fallbacks.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Reveal>
                 </section>
 
                 <section className="mx-auto max-w-[84rem] border-t border-white/5 px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-24 2xl:max-w-[90rem]">
@@ -709,6 +924,14 @@ function App() {
                             <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
                                 <div>
                                     <p className="text-sm uppercase tracking-[0.22em] text-cyan-100/80">Join the club</p>
+                                    <div className="mt-2 text-sm text-cyan-100/85">
+                                        <ShinyText
+                                            text="Applications are reviewed in weekly cycles"
+                                            speed={5}
+                                            color="#b8dcec"
+                                            shineColor="#ffffff"
+                                        />
+                                    </div>
                                     <h2 className="mt-4 font-display text-[clamp(1.8rem,5vw,3rem)] font-semibold tracking-tight text-white">
                                         Build with people who care about quality.
                                     </h2>
@@ -803,9 +1026,9 @@ function App() {
                                     </form>
 
                                     <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
-                                        <p className="font-display text-lg font-semibold text-white">MVP Flow Ready</p>
+                                        <p className="font-display text-lg font-semibold text-white">Production Data Flow</p>
                                         <p className="mt-3 text-sm leading-6 text-slate-300">
-                                            Team, events, and resources now load from live backend APIs and this form stores join submissions in MySQL.
+                                            Projects, team, former leads, and events load from live APIs and this form stores join submissions in MySQL.
                                         </p>
                                     </div>
                                 </div>

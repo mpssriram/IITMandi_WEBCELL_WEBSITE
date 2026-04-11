@@ -3,6 +3,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, status
 from ..Database import Database
 from ..admin.ResourceManagement import ResourceManagement
 from .schemas import (
+    JoinApplicationRequest,
     PublicJoinResponse,
     PublicListEventsResponse,
     PublicListFormerLeadsResponse,
@@ -219,12 +220,12 @@ def get_public_resources(
 
 
 @router.post("/join", response_model=PublicJoinResponse, status_code=status.HTTP_201_CREATED)
-def submit_join_application(payload: dict = Body(...)):
-    name = str(payload.get("name", "")).strip()
-    email = str(payload.get("email", "")).strip().lower()
-    year = str(payload.get("year", "")).strip() or None
-    interest = str(payload.get("interest", "")).strip() or None
-    message = str(payload.get("message", "")).strip() or None
+def submit_join_application(payload: JoinApplicationRequest = Body(...)):
+    name = payload.name.strip()
+    email = payload.email.strip().lower()
+    year = (payload.year or "").strip() or None
+    interest = (payload.interest or "").strip() or None
+    message = (payload.message or "").strip() or None
 
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="name is required")

@@ -2,6 +2,22 @@ const defaultBaseUrl = "http://localhost:5000";
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || defaultBaseUrl;
 
+function buildQuery(params?: Record<string, string | number | boolean | undefined>) {
+    if (!params) {
+        return "";
+    }
+
+    const search = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+            search.set(key, String(value));
+        }
+    });
+
+    const query = search.toString();
+    return query ? `?${query}` : "";
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${path}`, {
         headers: {
@@ -12,8 +28,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
 
     if (!response.ok) {
-        const message = await response.text();
-        throw new Error(message || `Request failed with status ${response.status}`);
+        const raw = await response.text();
+        try {
+            const parsed = JSON.parse(raw) as { detail?: string };
+            throw new Error(parsed.detail || `Request failed with status ${response.status}`);
+        } catch {
+            throw new Error(raw || `Request failed with status ${response.status}`);
+        }
     }
 
     return response.json() as Promise<T>;
@@ -99,20 +120,20 @@ type ListResponse<T> = {
     count: number;
 };
 
-export function getPublicTeam() {
-    return request<ListResponse<PublicTeamMember>>("/user/team");
+export function getPublicTeam(limit = 100, offset = 0) {
+    return request<ListResponse<PublicTeamMember>>(`/user/team${buildQuery({ limit, offset })}`);
 }
 
-export function getPublicProjects() {
-    return request<ListResponse<PublicProject>>("/user/projects");
+export function getPublicProjects(limit = 20, offset = 0) {
+    return request<ListResponse<PublicProject>>(`/user/projects${buildQuery({ limit, offset })}`);
 }
 
-export function getPublicFormerLeads() {
-    return request<ListResponse<PublicFormerLead>>("/user/former-leads");
+export function getPublicFormerLeads(limit = 20, offset = 0) {
+    return request<ListResponse<PublicFormerLead>>(`/user/former-leads${buildQuery({ limit, offset })}`);
 }
 
-export function getPublicEvents() {
-    return request<ListResponse<PublicEvent>>("/user/events");
+export function getPublicEvents(limit = 20, offset = 0) {
+    return request<ListResponse<PublicEvent>>(`/user/events${buildQuery({ limit, offset })}`);
 }
 
 export function submitJoinApplication(payload: JoinPayload) {

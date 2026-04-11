@@ -73,3 +73,53 @@
         text-wrap: balance;
     }
 }
+
+@keyframes hyperspeed-fall {
+    0% {
+        transform: translateY(-25vh) scaleY(0.8);
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: translateY(125vh) scaleY(1.05);
+        opacity: 0;
+    }
+}
+
+@keyframes fault-scan {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(280vw);
+    }
+}
+
+@keyframes grid-slide {
+    0% {
+        transform: translateX(-45vw);
+    }
+
+    100% {
+        transform: translateX(145vw);
+    }
+}
+
+@keyframes anti-rise {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+        opacity: 0.4;
+    }
+
+    50% {
+        transform: translateY(-150px);
+        opacity: 0.85;
+    }
+}
