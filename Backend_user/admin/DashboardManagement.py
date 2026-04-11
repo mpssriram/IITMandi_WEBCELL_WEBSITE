@@ -1,7 +1,20 @@
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+from ..Database import Database
+
+
+class DashboardManagement:
+=======
+>>>>>>> Stashed changes
 from .base import AdminServiceBase
 
 
 class DashboardManagement(AdminServiceBase):
+<<<<<<< Updated upstream
+=======
+>>>>>>> 2f2962dab9d3219bb71e3a0d704e4ebffc7295f2
+>>>>>>> Stashed changes
     ROLE_ORDER_SQL = """
         CASE
             WHEN role = 'Head' THEN 1
@@ -16,7 +29,57 @@ class DashboardManagement(AdminServiceBase):
 
     def __init__(self):
         """Set up the dashboard service with the shared database helper."""
+<<<<<<< Updated upstream
         super().__init__()
+=======
+<<<<<<< HEAD
+        self.db = Database()
+
+    def _success_response(self, data=None, message=None, **extra):
+        """Build a standard success response used by this file."""
+        response = {"success": True}
+        if message:
+            response["message"] = message
+        if data is not None:
+            response["data"] = data
+        response.update(extra)
+        return response
+
+    def _error_response(self, error, message=None, **extra):
+        """Build a standard error response used by this file."""
+        response = {"success": False, "error": error}
+        if message:
+            response["message"] = message
+        response.update(extra)
+        return response
+
+    def _close_cursor(self, cursor):
+        """Close a cursor safely after finishing a query."""
+        if cursor:
+            cursor.close()
+
+    def _close_db(self):
+        """Close the database connection safely after each method call."""
+        try:
+            self.db.close()
+        except Exception:
+            pass
+
+    def _validate_limit(self, limit):
+        """Validate a limit value used by dashboard list helpers."""
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            return False, None, "limit must be an integer"
+
+        if limit <= 0:
+            return False, None, "limit must be greater than 0"
+
+        return True, limit, None
+=======
+        super().__init__()
+>>>>>>> 2f2962dab9d3219bb71e3a0d704e4ebffc7295f2
+>>>>>>> Stashed changes
 
     def get_dashboard_counts(self):
         """Return dashboard totals and extra event insight counts."""

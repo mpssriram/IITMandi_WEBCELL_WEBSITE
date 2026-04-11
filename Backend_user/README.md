@@ -1,5 +1,13 @@
 # Backend_user
 
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+FastAPI backend for IIT Mandi WebCell.
+
+Run with:
+=======
+>>>>>>> Stashed changes
 This backend is based on the latest admin-enabled FastAPI backend from the repo and reuses the same admin services and route structure.
 
 ## Features
@@ -74,10 +82,19 @@ Copy `Backend_user\.env.example` to `Backend_user\.env` and fill in the values.
 `Backend_user\firebase-adminsdk.json`
 
 5. Run the backend from the repo root:
+<<<<<<< Updated upstream
+=======
+>>>>>>> 2f2962dab9d3219bb71e3a0d704e4ebffc7295f2
+>>>>>>> Stashed changes
 
 ```bash
 uvicorn Backend_user.main:app --reload --host 127.0.0.1 --port 5000
 ```
+<<<<<<< Updated upstream
+=======
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
 
 ## Main Endpoints
 
@@ -113,3 +130,7 @@ uvicorn Backend_user.main:app --reload --host 127.0.0.1 --port 5000
 - The startup hook creates the core MySQL tables if they do not already exist.
 - Admin routes require a Firebase token whose decoded payload contains `admin=true` or `role=admin`.
 - User routes use local JWT tokens returned by `/user/login` and `/user/register`.
+<<<<<<< Updated upstream
+=======
+>>>>>>> 2f2962dab9d3219bb71e3a0d704e4ebffc7295f2
+>>>>>>> Stashed changes

@@ -1,4 +1,11 @@
 __pycache__/
+<<<<<<< Updated upstream
+=======
+.env
+config.yaml
+
+__pycache__/
+>>>>>>> Stashed changes
 *.pyc
 .env
 config.yaml
