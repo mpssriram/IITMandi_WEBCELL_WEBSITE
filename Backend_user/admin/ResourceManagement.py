@@ -344,11 +344,32 @@ class ResourceManagement:
             self._close_cursor(cursor)
             self._close_db()
 
+    def update_resource(self, resource_id, resource_data):
+        """Update a resource using partial payload values."""
+        cursor = None
+
+        validation = self._validate_resource_payload(resource_data, partial=True)
+        if not validation["success"]:
+            return validation
+
+        cleaned_data = validation["data"]
+
+        try:
+            cursor = self.db.get_cursor()
+            cursor.execute(
+                """
+                SELECT id, title, description, type, url, category, uploaded_by, created_at
+                FROM resources
+                WHERE id = %s
+                """,
+                (resource_id,),
+            )
+            existing_resource = cursor.fetchone()
+            if not existing_resource:
+                return self._error_response("Resource not found")
+
             updated_resource = dict(existing_resource)
             updated_resource.update(cleaned_data)
-
-            if "url" in cleaned_data and not cleaned_data.get("url"):
-                return self._error_response("url cannot be empty")
 
             update_fields = []
             values = []
@@ -362,7 +383,10 @@ class ResourceManagement:
             cursor.execute(sql, tuple(values))
             self.db.commit()
 
-            return self._success_response(message="Resource updated successfully")
+            return self._success_response(
+                data={"resource_id": resource_id},
+                message="Resource updated successfully",
+            )
         except Exception as e:
             self.db.rollback()
             return self._error_response(f"Failed to update resource: {str(e)}")
