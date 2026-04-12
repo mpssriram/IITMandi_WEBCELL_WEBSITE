@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { ArrowRight, KeyRound, LockKeyhole, Mail, ShieldAlert } from "lucide-react";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect } from "firebase/auth";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from "firebase/auth";
 import { Link, useNavigate, useLocation, type Location } from "react-router-dom";
 
 import {
@@ -39,7 +39,7 @@ function normalizeAdminAuthError(error: unknown): string {
 export default function AdminLogin() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, isAdmin, loading: authLoading } = useAuth();
+    const { user, token, isAdmin, loading: authLoading } = useAuth();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -53,25 +53,32 @@ export default function AdminLogin() {
         from?.pathname && from.pathname !== "/admin/login"
             ? `${from.pathname}${from.search || ""}${from.hash || ""}`
             : "/admin/dashboard";
+    const isAuthenticated = Boolean(user && token);
 
-    // If already authenticated AND admin → redirect immediately.
-    // If authenticated but NOT admin → show access denied message (no redirect).
+    // If already authenticated AND admin -> redirect immediately.
+    // If Firebase still has a user but our app token is gone, clear that stale
+    // session so the admin login form keeps working reliably.
     useEffect(() => {
         if (authLoading) return;
 
-        if (user && isAdmin) {
+        if (user && !token) {
+            void signOut(auth).catch(() => undefined);
+            return;
+        }
+
+        if (isAuthenticated && isAdmin) {
             navigate(redirectTarget, { replace: true });
             return;
         }
 
-        if (user && !isAdmin && awaitingRole) {
+        if (isAuthenticated && !isAdmin && awaitingRole) {
             // Firebase sign-in succeeded but the account has no admin role.
             setError(
                 "This account does not have admin access. Contact the club administrator if you believe this is a mistake.",
             );
             setAwaitingRole(false);
         }
-    }, [authLoading, isAdmin, awaitingRole, navigate, redirectTarget, user]);
+    }, [authLoading, awaitingRole, isAdmin, isAuthenticated, navigate, redirectTarget, token, user]);
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();

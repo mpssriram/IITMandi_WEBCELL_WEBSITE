@@ -57,6 +57,14 @@ class PublicProject(BaseModel):
     featured: bool = False
     display_order: int = 0
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value):
+        normalized = str(value or "").strip().lower()
+        if normalized in {"active", "maintenance", "completed", "archived", "planned"}:
+            return normalized
+        return "planned"
+
 
 class PublicTeamMember(BaseModel):
     id: int

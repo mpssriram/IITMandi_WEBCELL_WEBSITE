@@ -3,8 +3,10 @@ import logging
 from fastapi import Depends, Header, HTTPException, status
 
 try:
+    from .config import Config
     from .firebase_admin_setup import FirebaseService, FirebaseServiceError
 except ImportError:
+    from config import Config
     from firebase_admin_setup import FirebaseService, FirebaseServiceError
 
 
@@ -13,9 +15,40 @@ class AuthDependencies:
     Authentication and authorization dependencies for FastAPI routes.
     """
 
-    def __init__(self, firebase_service: FirebaseService | None = None):
+    def __init__(
+        self,
+        firebase_service: FirebaseService | None = None,
+        config: Config | None = None,
+    ):
         self.firebase_service = firebase_service or FirebaseService()
+        self.config = config or Config()
         self.logger = logging.getLogger(__name__)
+
+    def _normalize_email(self, email):
+        return str(email or "").strip().lower()
+
+    def _normalize_uid(self, uid):
+        return str(uid or "").strip()
+
+    def _matches_admin_allowlist(self, user: dict):
+        normalized_uid = self._normalize_uid(
+            user.get("uid") or user.get("firebase_uid") or user.get("user_id") or user.get("sub")
+        )
+        normalized_email = self._normalize_email(user.get("email"))
+
+        if self.config.ADMIN_UIDS and normalized_uid and normalized_uid in self.config.ADMIN_UIDS:
+            return True
+
+        if self.config.ADMIN_EMAILS and normalized_email and normalized_email in self.config.ADMIN_EMAILS:
+            return True
+
+        return False
+
+    def is_admin_user(self, user: dict):
+        if self.config.ADMIN_UIDS or self.config.ADMIN_EMAILS:
+            return self._matches_admin_allowlist(user)
+
+        return bool(user.get("admin", False) or user.get("role") == "admin")
 
     def _normalize_identity(self, decoded_token: dict):
         uid = decoded_token.get("uid") or decoded_token.get("user_id") or decoded_token.get("sub")
@@ -101,7 +134,7 @@ class AuthDependencies:
 
         Later, this can be replaced with a database role lookup.
         """
-        is_admin = user.get("admin", False) or user.get("role") == "admin"
+        is_admin = self.is_admin_user(user)
 
         if not is_admin:
             raise HTTPException(

@@ -82,23 +82,28 @@ export function UserResourcesPage() {
     const [activeBucket, setActiveBucket] = useState<ResourceBucket>("all");
     const [resources, setResources] = useState<PublicResource[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState("");
 
     useEffect(() => {
         let mounted = true;
 
-        getPublicResources(120, 0)
+        getPublicResources(100, 0)
             .then((response) => {
                 if (!mounted) {
                     return;
                 }
-                setResources(dedupeResources(response.items || []));
+                const items = response.items || [];
+                const deduped = dedupeResources(items);
+                setResources(deduped.length ? deduped : items);
+                setLoadError("");
                 setLoading(false);
             })
-            .catch(() => {
+            .catch((error) => {
                 if (!mounted) {
                     return;
                 }
                 setResources([]);
+                setLoadError(error instanceof Error ? error.message : "Failed to load resources.");
                 setLoading(false);
             });
 
@@ -287,7 +292,9 @@ export function UserResourcesPage() {
 
             {!loading && !filteredResources.length ? (
                 <div className="rounded-[1.5rem] border border-dashed border-white/10 bg-white/5 p-8 text-sm text-slate-300">
-                    No resources matched your search and filters. Try a different keyword or category.
+                    {loadError
+                        ? `Could not load resources: ${loadError}`
+                        : "No resources matched your search and filters. Try a different keyword or category."}
                 </div>
             ) : null}
         </div>
@@ -295,4 +302,3 @@ export function UserResourcesPage() {
 }
 
 export default UserResourcesPage;
-

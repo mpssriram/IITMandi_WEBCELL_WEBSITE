@@ -59,7 +59,6 @@ class Database:
 
     def ensure_core_schema(self):
         schema_path = Path(__file__).resolve().parent.parent / "Backend" / "schema.sql"
-        seed_path = Path(__file__).resolve().parent.parent / "Backend" / "seed_data.sql"
 
         if not schema_path.exists():
             raise DatabaseError(f"Schema file not found: {schema_path}")
@@ -102,6 +101,7 @@ class Database:
                     roll_number VARCHAR(50) UNIQUE NULL,
                     password VARCHAR(255) NOT NULL,
                     role VARCHAR(50) NOT NULL DEFAULT 'user',
+                    active BOOLEAN NOT NULL DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
                 )
@@ -123,17 +123,29 @@ class Database:
                 if getattr(exc, "errno", None) != 1060:
                     raise
 
-            self.connection.commit()
+            try:
+                cursor.execute("ALTER TABLE users ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE")
+            except MySQLError as exc:
+                # Ignore if the column already exists.
+                if getattr(exc, "errno", None) != 1060:
+                    raise
 
-            if seed_path.exists():
-                seed_statements = [
-                    statement.strip()
-                    for statement in seed_path.read_text(encoding="utf-8").split(";")
-                    if statement.strip()
-                ]
-                for statement in seed_statements:
-                    cursor.execute(statement)
-                self.connection.commit()
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS announcements (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    category VARCHAR(64) NULL,
+                    date DATE NOT NULL,
+                    is_pinned BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+                """
+            )
+
+            self.connection.commit()
         except MySQLError as exc:
             raise DatabaseError(f"Failed to apply schema: {exc}") from exc
         finally:

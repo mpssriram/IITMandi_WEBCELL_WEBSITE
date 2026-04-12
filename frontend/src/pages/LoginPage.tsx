@@ -7,6 +7,7 @@ import {
     signInWithEmailAndPassword,
     signInWithPopup,
     signInWithRedirect,
+    signOut,
 } from "firebase/auth";
 import { Link, useNavigate, useLocation, type Location } from "react-router-dom";
 
@@ -14,7 +15,6 @@ import { AuthInput, AuthMessage, AuthDivider } from "@/components/AuthCard";
 import { Hyperspeed } from "@/components/Hyperspeed";
 import { useAuth } from "@/context/AuthContext";
 import { auth } from "@/lib/firebase";
-import { API_BASE_URL } from "@/lib/api";
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ function normalizeFirebaseError(error: unknown, fallback: string): string {
 export function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, isAdmin, loading: authLoading } = useAuth();
+    const { user, token, isAdmin, loading: authLoading } = useAuth();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -69,15 +69,27 @@ export function LoginPage() {
 
     const from = (location.state as { from?: Location } | null)?.from;
     const intendedPath = from?.pathname && from.pathname !== "/login" ? from.pathname : null;
+    const isAuthenticated = Boolean(user && token);
 
-    // Redirect if already authenticated
     useEffect(() => {
-        if (authLoading || !user) return;
-        
-        // If we are on the login page but already authenticated, redirect to the appropriate dashboard.
+        localStorage.removeItem("devcell_force_logout");
+    }, []);
+
+    // Redirect if already authenticated. If Firebase still has a user but our app
+    // token is gone, clear that stale session so the login page remains usable.
+    useEffect(() => {
+        if (authLoading) return;
+
+        if (user && !token) {
+            void signOut(auth).catch(() => undefined);
+            return;
+        }
+
+        if (!isAuthenticated) return;
+
         const destination = intendedPath || (isAdmin ? "/admin/dashboard" : "/user/dashboard");
         navigate(destination, { replace: true });
-    }, [authLoading, isAdmin, intendedPath, navigate, user]);
+    }, [authLoading, intendedPath, isAdmin, isAuthenticated, navigate, token, user]);
 
     // Handle Google redirect result (mobile popup-blocked fallback)
     useEffect(() => {

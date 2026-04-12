@@ -4,6 +4,7 @@ import { Link, useOutletContext } from "react-router-dom";
 
 import { ElectricCard } from "@/components/ElectricCard";
 import { Reveal } from "@/components/Reveal";
+import { getMyRegistrations } from "@/lib/api";
 import type { UserAreaContext } from "@/layouts/UserAreaLayout";
 
 function formatEventDate(dateValue?: string | null) {
@@ -28,21 +29,26 @@ export function UserDashboardPage() {
 
     const [myRegistrations, setMyRegistrations] = useState<any[]>([]);
     const [loadingRegistrations, setLoadingRegistrations] = useState(true);
+    const [registrationsError, setRegistrationsError] = useState("");
 
     useEffect(() => {
         let mounted = true;
-        import("@/lib/api").then(({ getMyRegistrations }) => {
-            getMyRegistrations(token, 5)
-                .then((res) => {
-                    if (mounted) setMyRegistrations(res.items || []);
-                })
-                .catch(() => {
-                    if (mounted) setMyRegistrations([]);
-                })
-                .finally(() => {
-                    if (mounted) setLoadingRegistrations(false);
-                });
-        });
+        setLoadingRegistrations(true);
+        setRegistrationsError("");
+
+        getMyRegistrations(token, 5)
+            .then((res) => {
+                if (!mounted) return;
+                setMyRegistrations(res.items || []);
+            })
+            .catch((error) => {
+                if (!mounted) return;
+                setMyRegistrations([]);
+                setRegistrationsError(error instanceof Error ? error.message : "Failed to load your registrations.");
+            })
+            .finally(() => {
+                if (mounted) setLoadingRegistrations(false);
+            });
         return () => { mounted = false; };
     }, [token]);
 
@@ -201,6 +207,10 @@ export function UserDashboardPage() {
                             Array.from({ length: 3 }).map((_, i) => (
                                 <div key={i} className="h-24 animate-pulse rounded-2xl bg-white/5" />
                             ))
+                        ) : registrationsError ? (
+                            <div className="col-span-full rounded-2xl border border-rose-300/25 bg-rose-400/10 p-4 text-sm text-rose-100">
+                                Could not load registrations: {registrationsError}
+                            </div>
                         ) : myRegistrations.length > 0 ? (
                             myRegistrations.map((reg) => (
                                 <Link

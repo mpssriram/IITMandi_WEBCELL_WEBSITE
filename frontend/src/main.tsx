@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, type Location } from "react-router-dom";
 
 import App from "@/App";
+import ClickSpark from "@/components/reactbits/ClickSpark";
 import { AuthProvider } from "@/context/AuthContext";
 import { ProtectedAdminRoute } from "@/routes/ProtectedAdminRoute";
 import { ProtectedUserRoute } from "@/routes/ProtectedUserRoute";
@@ -88,6 +89,7 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
         <AuthProvider>
             <BrowserRouter>
                 <Suspense fallback={<div className="min-h-screen bg-ink-950" />}>
+                    <ClickSpark sparkCount={10} sparkSize={8} sparkRadius={24} />
                     <AppRouter />
                 </Suspense>
             </BrowserRouter>

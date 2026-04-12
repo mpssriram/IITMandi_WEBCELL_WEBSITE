@@ -1,5 +1,5 @@
-// In dev, use the Vite proxy; in direct runs, this must match Backend_user/main.py.
-const defaultBaseUrl = import.meta.env.DEV ? "/api" : "http://localhost:8765";
+// In both dev and production, prefer same-origin API routing via /api.
+const defaultBaseUrl = "/api";
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL || defaultBaseUrl;
 
@@ -275,7 +275,8 @@ export function getPublicEvent(eventId: number) {
 }
 
 export function getPublicResources(limit = 20, offset = 0, filters: PublicResourceQuery = {}) {
-    return request<ListResponse<PublicResource>>(`/user/resources${buildQuery({ limit, offset, ...filters })}`);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
+    return request<ListResponse<PublicResource>>(`/user/resources${buildQuery({ limit: safeLimit, offset, ...filters })}`);
 }
 
 export function submitJoinApplication(payload: JoinPayload) {
@@ -532,6 +533,6 @@ export function deleteAdminResource(token: string, resourceId: number) {
 }
 
 export function getMyRegistrations(token: string, limit = 20, offset = 0) {
-    return authedRequest<ListResponse<PublicEvent>>(`/user/events/my-registrations${buildQuery({ limit, offset })}`, token);
+    return authedRequest<ListResponse<PublicEvent>>(`/user/my-registrations${buildQuery({ limit, offset })}`, token);
 }
 

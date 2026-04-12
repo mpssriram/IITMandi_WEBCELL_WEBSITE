@@ -97,6 +97,26 @@ def get_public_events(
     )
 
 
+@router.get("/events/my-registrations")
+def get_my_registrations(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: dict = Depends(auth_dependencies.get_current_user),
+):
+    service = UserService()
+    return service.list_my_registrations(current_user, limit, offset)
+
+
+@router.get("/my-registrations")
+def get_my_registrations_v2(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: dict = Depends(auth_dependencies.get_current_user),
+):
+    service = UserService()
+    return service.list_my_registrations(current_user, limit, offset)
+
+
 @router.get("/events/{event_id}")
 def get_event(event_id: int):
     service = UserService()
@@ -110,16 +130,6 @@ def register_for_event(
 ):
     service = UserService()
     return service.register_for_event(event_id, current_user)
-
-
-@router.get("/events/my-registrations")
-def get_my_registrations(
-    limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
-    current_user: dict = Depends(auth_dependencies.get_current_user),
-):
-    service = UserService()
-    return service.list_my_registrations(current_user, limit, offset)
 
 
 @router.get("/resources")

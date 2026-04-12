@@ -50,19 +50,22 @@ class AuthDependencies(SharedAuthDependencies):
             pending_user = dict(firebase_user)
             pending_user["new_user"] = True
             pending_user["onboarding_required"] = True
-            pending_user["admin"] = False
+            pending_user["admin"] = self.is_admin_user(pending_user)
+            pending_user["role"] = "admin" if pending_user["admin"] else str(pending_user.get("role") or "user")
             return pending_user
 
         merged_user = dict(firebase_user)
         merged_user.update(local_user)
         merged_user["new_user"] = new_user
         merged_user["onboarding_required"] = not bool(local_user.get("roll_number"))
-        merged_user["admin"] = local_user.get("role") == "admin"
+        merged_user["admin"] = self.is_admin_user(merged_user)
+        if merged_user["admin"]:
+            merged_user["role"] = "admin"
         return merged_user
 
     def get_current_admin(self, authorization: str | None = Header(default=None)):
         user = self.get_current_user(authorization)
-        is_admin = user.get("role") == "admin"
+        is_admin = self.is_admin_user(user)
 
         if not is_admin:
             raise HTTPException(

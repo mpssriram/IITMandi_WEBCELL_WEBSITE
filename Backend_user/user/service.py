@@ -476,17 +476,21 @@ class UserService:
             cursor.execute(
                 """
                 SELECT 
-                    e.id, 
-                    e.title, 
-                    e.type, 
-                    e.description,
-                    DATE_FORMAT(e.date, '%Y-%m-%d') as date, 
-                    e.venue, 
-                    e.poster_image_url
+                    er.event_id AS id,
+                    COALESCE(we.title, ev.title) AS title,
+                    COALESCE(we.type, 'event') AS type,
+                    COALESCE(we.description, ev.description) AS description,
+                    COALESCE(
+                        DATE_FORMAT(we.date, '%Y-%m-%d'),
+                        DATE_FORMAT(ev.date, '%Y-%m-%d')
+                    ) AS date,
+                    COALESCE(we.venue, ev.location) AS venue,
+                    we.poster_image_url
                 FROM event_registrations er
-                JOIN website_events e ON er.event_id = e.id
+                LEFT JOIN website_events we ON er.event_id = we.id
+                LEFT JOIN events ev ON er.event_id = ev.id
                 WHERE (er.email = %s OR er.roll_no = %s OR er.notes = %s)
-                ORDER BY e.date DESC
+                ORDER BY COALESCE(we.date, ev.date) DESC, er.created_at DESC
                 LIMIT %s OFFSET %s
                 """,
                 (

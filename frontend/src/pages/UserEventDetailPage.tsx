@@ -16,7 +16,7 @@ import { Link, useOutletContext, useParams } from "react-router-dom";
 
 import { ElectricCard } from "@/components/ElectricCard";
 import { Prism } from "@/components/Prism";
-import { getPublicEvent, registerForEvent, type PublicEvent } from "@/lib/api";
+import { getMyRegistrations, getPublicEvent, registerForEvent, type PublicEvent } from "@/lib/api";
 import { normalizeExternalUrl } from "@/lib/collections";
 import type { UserAreaContext } from "@/layouts/UserAreaLayout";
 
@@ -384,12 +384,22 @@ export function UserEventDetailPage() {
                                         setRegisterError("");
                                         try {
                                             await registerForEvent(token, eventItem.id);
+                                            const myRegs = await getMyRegistrations(token, 100, 0);
+                                            const hasRegistration = (myRegs.items || []).some(
+                                                (item) => Number(item.id) === Number(eventItem.id),
+                                            );
+                                            if (!hasRegistration) {
+                                                setRegisterError(
+                                                    "Registration request succeeded, but it did not appear in your dashboard list yet. Please refresh once.",
+                                                );
+                                            }
                                             setRegistered(true);
                                         } catch (err) {
                                             const msg = err instanceof Error ? err.message : "Registration failed. Try again.";
-                                            // If the API says already registered, treat it as success
+                                            // If already registered, keep a positive state but show explicit message.
                                             if (msg.toLowerCase().includes("already")) {
                                                 setRegistered(true);
+                                                setRegisterError("You were already registered for this event.");
                                             } else {
                                                 setRegisterError(msg);
                                             }
@@ -428,4 +438,3 @@ export function UserEventDetailPage() {
 }
 
 export default UserEventDetailPage;
-
