@@ -256,6 +256,8 @@ class EventRegistration:
                         "search_location": search_location,
                     },
                 },
+                items=events,
+                count=len(events),
                 events=events,
             )
         except Exception as e:
@@ -576,6 +578,8 @@ class EventRegistration:
                     "offset": offset,
                     "count": len(registrations),
                 },
+                items=registrations,
+                count=len(registrations),
                 registrations=registrations,
             )
         except Exception as e:

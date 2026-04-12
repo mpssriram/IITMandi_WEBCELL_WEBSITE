@@ -15,9 +15,7 @@ const AdminAreaLayout = lazy(() => import("@/layouts/AdminAreaLayout").then((mod
 const AdminDashboardPage = lazy(() => import("@/pages/AdminDashboardPage").then((module) => ({ default: module.AdminDashboardPage })));
 const AdminUsersPage = lazy(() => import("@/pages/AdminUsersPage"));
 const AdminEventsPage = lazy(() => import("@/pages/AdminEventsPage"));
-const AdminProjectsPage = lazy(() => import("@/pages/AdminProjectsPage"));
 const AdminResourcesPage = lazy(() => import("@/pages/AdminResourcesPage"));
-const AdminAnnouncementsPage = lazy(() => import("@/pages/AdminAnnouncementsPage"));
 
 // ─── User Side Components ──────────────────────────────────────────────────
 const UserAreaLayout = lazy(() => import("@/layouts/UserAreaLayout").then((module) => ({ default: module.UserAreaLayout })));
@@ -53,9 +51,7 @@ function AppRouter() {
                         <Route path="dashboard" element={<AdminDashboardPage />} />
                         <Route path="users" element={<AdminUsersPage />} />
                         <Route path="events" element={<AdminEventsPage />} />
-                        <Route path="projects" element={<AdminProjectsPage />} />
                         <Route path="resources" element={<AdminResourcesPage />} />
-                        <Route path="announcements" element={<AdminAnnouncementsPage />} />
                     </Route>
                 </Route>
 

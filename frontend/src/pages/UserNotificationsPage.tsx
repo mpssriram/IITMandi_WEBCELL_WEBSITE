@@ -169,4 +169,4 @@ export function UserNotificationsPage() {
         </div>
     );
 }
-
+export default UserNotificationsPage;

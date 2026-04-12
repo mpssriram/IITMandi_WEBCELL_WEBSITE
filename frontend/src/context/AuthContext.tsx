@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, type User } from "firebase/auth";
+import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { API_BASE_URL } from "@/lib/api";
 
 type AppUser = {
@@ -21,6 +21,7 @@ type AuthContextValue = {
     token: string | null;
     isAdmin: boolean;
     loading: boolean;
+    logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -135,8 +136,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
     }, []);
 
+    const logout = async () => {
+        await signOut(auth);
+        applyAnonymousState();
+    };
+
     const value = useMemo<AuthContextValue>(
-        () => ({ user, appUser, token, isAdmin, loading }),
+        () => ({ user, appUser, token, isAdmin, loading, logout }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         [user, appUser, token, isAdmin, loading],
     );
 

@@ -9,9 +9,9 @@ import {
     Trash2,
     ShieldOff,
     ShieldCheck,
-    UserCircle2,
     CalendarDays,
     AlertCircle,
+    Loader2,
 } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
@@ -19,7 +19,6 @@ import {
     getAdminUsers,
     createAdminUser,
     updateAdminUser,
-    toggleAdminUserStatus,
     deleteAdminUser,
     type AdminUser,
 } from "@/lib/api";
@@ -41,37 +40,32 @@ function formatDate(raw?: string | null) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const TH = ({ label }: { label: string }) => (
-    <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.12em] text-slate-500 border-b border-white/[0.06]">
+const TH = ({ label, align = "left" }: { label: string; align?: "left" | "right" | "center" }) => (
+    <th className={`px-4 py-3 text-${align} text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/[0.05] bg-white/[0.02]`}>
         {label}
     </th>
 );
 
-type UserRowProps = { user: AdminUser & { active?: boolean }; onRefresh: () => void };
+type UserRowProps = { user: AdminUser; onRefresh: () => void };
 
 const UserRow = memo(({ user, onRefresh }: UserRowProps) => {
     const { token } = useAuth();
     const isLinked = !!user.firebase_uid;
     const isAdmin = String(user.role).toLowerCase() === "admin";
-    const isActive = user.active !== false;
-
-    const handleToggleStatus = async () => {
-        if (!token) return;
-        try {
-            await toggleAdminUserStatus(token, user.id, !isActive);
-            onRefresh();
-        } catch {
-            alert("Failed to toggle status");
-        }
-    };
+    const [rowError, setRowError] = useState<string | null>(null);
+    const [working, setWorking] = useState(false);
 
     const handleDelete = async () => {
         if (!token || !window.confirm(`Permanently delete ${user.name}? This cannot be undone.`)) return;
+        setWorking(true);
+        setRowError(null);
         try {
             await deleteAdminUser(token, user.id);
             onRefresh();
-        } catch {
-            alert("Failed to delete user");
+        } catch (err: any) {
+            setRowError(err?.message || "Failed to delete user");
+        } finally {
+            setWorking(false);
         }
     };
 
@@ -79,122 +73,132 @@ const UserRow = memo(({ user, onRefresh }: UserRowProps) => {
         if (!token) return;
         const newRole = isAdmin ? "user" : "admin";
         if (!window.confirm(`Change ${user.name}'s role to ${newRole}?`)) return;
+        setWorking(true);
+        setRowError(null);
         try {
             await updateAdminUser(token, user.id, { role: newRole });
             onRefresh();
-        } catch {
-            alert("Failed to update role");
+        } catch (err: any) {
+            setRowError(err?.message || "Failed to update role");
+        } finally {
+            setWorking(false);
         }
     };
 
     return (
-        <tr
-            className={`group border-b border-white/[0.04] transition-colors hover:bg-white/[0.02] ${
-                !isActive ? "opacity-50 grayscale" : ""
-            }`}
-        >
-            {/* Member */}
-            <td className="px-4 py-2.5">
-                <div className="flex items-center gap-3">
-                    <div
-                        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
-                            isAdmin
-                                ? "border border-violet-400/20 bg-violet-400/10 text-violet-300"
-                                : "border border-cyan-400/20 bg-cyan-400/10 text-cyan-300"
+        <React.Fragment>
+            <tr className="group border-b border-white/[0.03] transition-colors hover:bg-white/[0.03] last:border-0">
+                {/* Member Identity */}
+                <td className="px-4 py-2">
+                    <div className="flex items-center gap-3">
+                        <div
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded text-[10px] font-black ${
+                                isAdmin
+                                    ? "bg-cyan-500 text-slate-900"
+                                    : "bg-slate-800 text-slate-400"
+                            }`}
+                        >
+                            {(user.name || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[13px] font-bold text-slate-200 leading-none">{user.name}</span>
+                        </div>
+                    </div>
+                </td>
+
+                {/* Registry Details (Email + Roll) */}
+                <td className="px-4 py-2">
+                    <div className="flex flex-col gap-0.5 font-mono">
+                        <span className="text-[11px] text-slate-300 truncate max-w-[180px]">{user.email || "NO_ALIAS"}</span>
+                        <span className="text-[10px] text-slate-500">{user.roll_number || "NO_UID"}</span>
+                    </div>
+                </td>
+
+                {/* Access Tier */}
+                <td className="px-4 py-2">
+                    <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-tighter ${
+                            isAdmin ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20" : "bg-slate-800/50 text-slate-500 border border-slate-700/50"
                         }`}
                     >
-                        {(user.name || "?").charAt(0).toUpperCase()}
+                        {user.role}
+                    </span>
+                </td>
+
+                {/* Sync State */}
+                <td className="px-4 py-2">
+                    {isLinked ? (
+                        <div className="flex items-center gap-1.5 text-emerald-500">
+                            <div className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">Verified</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1.5 text-amber-500">
+                            <div className="h-1 w-1 rounded-full bg-amber-500 animate-pulse" />
+                            <span className="text-[10px] font-bold uppercase tracking-tighter">Legacy</span>
+                        </div>
+                    )}
+                </td>
+
+                {/* Date Created */}
+                <td className="px-4 py-2">
+                    <span className="text-[11px] font-mono text-slate-500">
+                        {formatDate(user.created_at)}
+                    </span>
+                </td>
+
+                {/* Control Actions */}
+                <td className="px-4 py-2 text-right">
+                    <div className="flex justify-end gap-1">
+                        {working ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-cyan-500" />
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleRoleChange}
+                                    title={isAdmin ? "Demote Privilege" : "Elevate Privilege"}
+                                    className={`rounded h-7 w-7 flex items-center justify-center transition-all ${
+                                        isAdmin ? "text-slate-500 hover:text-amber-400 hover:bg-amber-400/10" : "text-slate-500 hover:text-cyan-400 hover:bg-cyan-400/10"
+                                    }`}
+                                >
+                                    {isAdmin ? <ShieldOff className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    title="De-provision Entity"
+                                    className="rounded h-7 w-7 flex items-center justify-center text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all border border-transparent hover:border-rose-500/20"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                            </>
+                        )}
                     </div>
-                    <div className="flex flex-col">
-                        <span className="text-[13px] font-semibold text-slate-200">{user.name}</span>
-                        <span className="text-[11px] text-slate-500">{user.roll_number || "—"}</span>
-                    </div>
-                </div>
-            </td>
-
-            {/* Email */}
-            <td className="px-4 py-2.5">
-                <div className="flex items-center gap-2 text-[12px] text-slate-300">
-                    <Mail className="h-3.5 w-3.5 shrink-0 text-slate-500" />
-                    <span className="truncate max-w-[180px]">{user.email || "—"}</span>
-                </div>
-            </td>
-
-            {/* Role */}
-            <td className="px-4 py-2.5">
-                <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                        isAdmin ? "bg-violet-400/10 text-violet-300" : "bg-slate-800 text-slate-400"
-                    }`}
-                >
-                    {user.role}
-                </span>
-            </td>
-
-            {/* Auth Status */}
-            <td className="px-4 py-2.5">
-                {isLinked ? (
-                    <div className="flex items-center gap-1.5 text-emerald-400">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        <span className="text-[11px] font-medium">Linked</span>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-1.5 text-amber-500">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span className="text-[11px] font-medium">Pending</span>
-                    </div>
-                )}
-            </td>
-
-            {/* Created Date */}
-            <td className="px-4 py-2.5">
-                <div className="flex items-center gap-1.5 text-[12px] text-slate-400">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0 text-slate-600" />
-                    {formatDate(user.created_at)}
-                </div>
-            </td>
-
-            {/* Actions */}
-            <td className="px-4 py-2.5 text-right">
-                <div className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <button
-                        onClick={handleRoleChange}
-                        title={isAdmin ? "Demote to User" : "Promote to Admin"}
-                        className="rounded-md p-1.5 text-slate-500 hover:bg-white/5 hover:text-cyan-300"
-                    >
-                        {isAdmin ? <ShieldOff className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" />}
-                    </button>
-                    <button
-                        onClick={handleToggleStatus}
-                        title={isActive ? "Deactivate" : "Activate"}
-                        className={`rounded-md p-1.5 text-slate-500 hover:bg-white/5 ${
-                            isActive ? "hover:text-amber-400" : "hover:text-emerald-400"
-                        }`}
-                    >
-                        <UserCircle2 className="h-4 w-4" />
-                    </button>
-                    <button
-                        onClick={handleDelete}
-                        title="Delete permanently"
-                        className="rounded-md p-1.5 text-slate-500 hover:bg-white/5 hover:text-rose-400"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </button>
-                </div>
-            </td>
-        </tr>
+                </td>
+            </tr>
+            {rowError && (
+                <tr>
+                    <td colSpan={6} className="px-4 py-2 bg-rose-500/5">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500 flex items-center gap-2">
+                            <AlertCircle className="h-3 w-3" />
+                            Error: {rowError}
+                        </p>
+                    </td>
+                </tr>
+            )}
+        </React.Fragment>
     );
 });
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page Components ──────────────────────────────────────────────────────────
 
 type FormState = { name: string; email: string; roll_number: string; role: "user" | "admin" };
-
 const EMPTY_FORM: FormState = { name: "", email: "", roll_number: "", role: "user" };
+
+import React from "react";
 
 export default function AdminUsersPage() {
     const { token } = useAuth();
-    const [users, setUsers] = useState<(AdminUser & { active?: boolean })[]>([]);
+    const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState("");
@@ -251,15 +255,15 @@ export default function AdminUsersPage() {
                 </div>
                 <button
                     onClick={() => { setForm(EMPTY_FORM); setSubmitError(null); setModalOpen(true); }}
-                    className="flex h-10 items-center gap-2 rounded-lg bg-cyan-400 px-4 text-sm font-bold text-[#030711] shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all hover:scale-[1.02]"
+                    className="flex h-10 items-center gap-2 rounded-lg bg-cyan-500 px-4 text-sm font-bold text-slate-900 transition-all hover:bg-cyan-400"
                 >
                     <UserPlus className="h-4 w-4" />
                     Add User
                 </button>
             </div>
 
-            {/* Search */}
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2">
+            {/* Search + Filter */}
+            <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-[#0d121c]/50 p-2">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
                     <input
@@ -270,24 +274,24 @@ export default function AdminUsersPage() {
                         className="h-9 w-full bg-transparent pl-9 pr-4 text-[13px] text-slate-200 placeholder:text-slate-600 focus:outline-none"
                     />
                 </div>
-                <div className="h-4 w-px bg-white/[0.06]" />
-                <button className="flex h-9 items-center gap-2 px-3 text-[12px] font-semibold text-slate-400 hover:text-slate-200">
+                <div className="h-4 w-px bg-slate-700" />
+                <div className="flex h-9 items-center gap-2 px-3 text-[12px] font-semibold text-slate-500">
                     <Filter className="h-4 w-4" />
                     All Roles
-                </button>
+                </div>
             </div>
 
             {/* Table */}
-            <div className="overflow-hidden rounded-xl border border-white/[0.06] bg-[#050b18]/40 shadow-2xl">
+            <div className="overflow-hidden rounded-xl border border-slate-800 bg-[#0d121c] shadow-sm">
                 <table className="w-full border-collapse">
                     <thead>
-                        <tr className="bg-white/[0.02]">
+                        <tr className="bg-slate-800/20">
                             <TH label="Member" />
                             <TH label="Email" />
                             <TH label="Role" />
-                            <TH label="Auth Status" />
+                            <TH label="Firebase Status" />
                             <TH label="Created" />
-                            <th className="border-b border-white/[0.06]" />
+                            <th className="border-b border-slate-800" />
                         </tr>
                     </thead>
                     <tbody>
@@ -305,7 +309,7 @@ export default function AdminUsersPage() {
                                         <span className="text-[13px] text-rose-400">{error}</span>
                                         <button
                                             onClick={fetchUsers}
-                                            className="mt-2 rounded-md bg-white/5 px-4 py-1.5 text-[12px] text-slate-300 hover:bg-white/10"
+                                            className="mt-2 rounded-md bg-slate-800 px-4 py-1.5 text-[12px] text-slate-300 hover:bg-slate-700"
                                         >
                                             Retry
                                         </button>
@@ -329,8 +333,8 @@ export default function AdminUsersPage() {
 
             {/* Add User Modal */}
             {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-                    <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#0d121f] p-8 shadow-2xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-slate-800 bg-[#0d121c] p-8 shadow-2xl">
                         <h2 className="text-xl font-bold tracking-tight text-white">Add User</h2>
                         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
                             <div className="space-y-1.5">
@@ -341,65 +345,59 @@ export default function AdminUsersPage() {
                                     required
                                     value={form.name}
                                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    className="h-11 w-full rounded-lg border border-white/10 bg-white/[0.03] px-4 text-sm text-white focus:border-cyan-400/50 focus:outline-none"
+                                    className="h-11 w-full rounded-lg border border-slate-800 bg-[#070b12] px-4 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                                 />
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                    Email Address *
-                                </label>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Verification Email</label>
                                 <input
                                     required
                                     type="email"
                                     value={form.email}
                                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                    className="h-11 w-full rounded-lg border border-white/10 bg-white/[0.03] px-4 text-sm text-white focus:border-cyan-400/50 focus:outline-none"
+                                    className="h-10 w-full rounded-lg border border-white/[0.05] bg-[#070b12] px-4 text-[13px] text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
+                                    placeholder="user@university.edu"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                        Roll Number
-                                    </label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Identity UID</label>
                                     <input
                                         value={form.roll_number}
                                         onChange={(e) => setForm({ ...form, roll_number: e.target.value })}
-                                        className="h-11 w-full rounded-lg border border-white/10 bg-white/[0.03] px-4 text-sm text-white focus:border-cyan-400/50 focus:outline-none"
+                                        className="h-10 w-full rounded-lg border border-white/[0.05] bg-[#070b12] px-4 text-[13px] text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-mono"
+                                        placeholder="ROLL_ID_X"
                                     />
                                 </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                        Role
-                                    </label>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Access Tier</label>
                                     <select
                                         value={form.role}
                                         onChange={(e) => setForm({ ...form, role: e.target.value as "user" | "admin" })}
-                                        className="h-11 w-full appearance-none rounded-lg border border-white/10 bg-[#0d121f] px-4 text-sm text-white focus:border-cyan-400/50 focus:outline-none"
+                                        className="h-10 w-full appearance-none rounded-lg border border-white/[0.05] bg-[#070b12] px-4 text-[13px] text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all font-bold uppercase"
                                     >
-                                        <option value="user">User</option>
-                                        <option value="admin">Admin</option>
+                                        <option value="user">DEFAULT USER</option>
+                                        <option value="admin">CORE ADMIN</option>
                                     </select>
                                 </div>
                             </div>
                             {submitError && (
-                                <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-[12px] text-rose-400">
-                                    {submitError}
-                                </p>
+                                <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-[11px] font-bold text-rose-500 border border-rose-500/20">{submitError}</p>
                             )}
-                            <div className="mt-6 flex gap-3">
+                            <div className="mt-8 flex gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setModalOpen(false)}
-                                    className="flex-1 h-11 rounded-lg font-semibold text-slate-400 hover:bg-white/5"
+                                    className="flex-1 h-11 rounded-lg border border-white/[0.05] font-bold text-[11px] uppercase tracking-widest text-slate-500 hover:bg-white/[0.02] transition-colors"
                                 >
-                                    Cancel
+                                    Abort
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={submitting}
-                                    className="flex-1 h-11 rounded-lg bg-cyan-400 font-bold text-[#030711] shadow-[0_0_20px_rgba(34,211,238,0.2)] disabled:opacity-60"
+                                    className="flex-1 h-11 rounded-lg bg-cyan-500 font-black text-[11px] uppercase tracking-[0.2em] text-slate-900 disabled:opacity-60 transition-all hover:bg-cyan-400 active:scale-95"
                                 >
-                                    {submitting ? "Adding..." : "Add User"}
+                                    {submitting ? "PROVISIONING..." : "COMMIT ENTITY"}
                                 </button>
                             </div>
                         </form>

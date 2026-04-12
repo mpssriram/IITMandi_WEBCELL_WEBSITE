@@ -107,6 +107,9 @@ export type PublicEvent = {
     speakers?: string | null;
     organizers?: string | null;
     status?: string | null;
+    time?: string | null;
+    organizer?: string | null;
+    max_participants?: number | null;
     featured: boolean;
 };
 
@@ -382,6 +385,7 @@ export interface EventRegistration {
     full_name: string;
     email: string;
     roll_no?: string;
+    roll_number?: string;
     branch?: string;
     year_of_study?: string;
     phone?: string;

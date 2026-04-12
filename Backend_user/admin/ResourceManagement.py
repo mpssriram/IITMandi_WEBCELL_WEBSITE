@@ -267,6 +267,8 @@ class ResourceManagement:
                         "search_type": normalized_type,
                     },
                 },
+                items=resources,
+                count=len(resources),
                 resources=resources,
             )
         except Exception as e:

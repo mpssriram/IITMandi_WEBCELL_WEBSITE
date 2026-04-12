@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { PixelBlast } from "@/components/PixelBlast";
-import { Bell, BookOpen, CalendarDays, ChevronDown, ChevronRight, LogOut, UserCircle } from "lucide-react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Bell, BookOpen, CalendarDays, ChevronDown, ChevronRight, LogOut, UserCircle, Menu, X, LayoutDashboard, Calendar, FolderKanban, Library, UsersRound } from "lucide-react";
+import { NavLink, Outlet, useLocation, useNavigate, Link } from "react-router-dom";
 import { signOut } from "firebase/auth";
 
+import { useAuth } from "@/context/AuthContext";
+import Orb from "@/components/reactbits/Orb";
 import { ElectricCard } from "@/components/ElectricCard";
 import { UserAvatar } from "@/components/UserAvatar";
 import {
@@ -408,10 +409,9 @@ export function UserAreaLayout() {
     return (
         <div className="relative min-h-screen text-white">
             <div className="fixed inset-0 -z-30 bg-[#06090e]" />
-            <div className="fixed inset-0 -z-20 opacity-60">
-                <PixelBlast />
+            <div className="pointer-events-none fixed inset-0 -z-20 overflow-hidden opacity-50">
+                <Orb intensity={0.8} />
             </div>
-            <div className="pointer-events-none fixed inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.12),transparent_40%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.1),transparent_35%),linear-gradient(180deg,transparent_0%,#06090e_80%)]" />
             
             <header className="sticky top-0 z-40 border-b border-white/10 bg-[linear-gradient(180deg,rgba(5,9,18,0.98),rgba(5,9,18,0.95))]">
                 <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
