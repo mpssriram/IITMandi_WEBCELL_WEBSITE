@@ -1,9 +1,12 @@
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
+from .AnnouncementsManagement import AnnouncementsManagement
 from .DashboardManagement import DashboardManagement
 from .Event_Registration import EventRegistration
+from .ProjectsManagement import ProjectsManagement
 from .ResourceManagement import ResourceManagement
 from .Teammanagement import TeamManagement
+from .UserManagement import UserManagement
 
 from ..auth import auth_dependencies
 
@@ -53,6 +56,43 @@ def get_dashboard_counts():
 def get_admin_dashboard(limit: int = Query(default=5, ge=1, le=20)):
     dashboard = DashboardManagement()
     return _handle_service_result(dashboard.get_admin_dashboard(recent_limit=limit))
+
+
+@router.get("/users")
+def get_users(
+    limit: int = Query(default=10, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    search: str | None = None,
+    role: str | None = None,
+):
+    user_admin = UserManagement()
+    return _handle_service_result(
+        user_admin.get_users(limit=limit, offset=offset, search=search, role=role)
+    )
+
+
+@router.post("/users", status_code=status.HTTP_201_CREATED)
+def create_user(user_data: dict = Body(...)):
+    user_admin = UserManagement()
+    return _handle_service_result(user_admin.create_user(user_data))
+
+
+@router.patch("/users/{user_id}")
+def update_user(user_id: int, user_data: dict = Body(...)):
+    user_admin = UserManagement()
+    return _handle_service_result(user_admin.update_user(user_id, user_data))
+
+
+@router.post("/users/{user_id}/toggle-status")
+def toggle_user_status(user_id: int, active: bool = Query(...)):
+    user_admin = UserManagement()
+    return _handle_service_result(user_admin.toggle_user_status(user_id, active))
+
+
+@router.delete("/users/{user_id}")
+def delete_user(user_id: int):
+    user_admin = UserManagement()
+    return _handle_service_result(user_admin.delete_user(user_id))
 
 
 @router.get("/events")
@@ -129,6 +169,12 @@ def get_event_registrations(
     return _handle_service_result(
         event_admin.get_event_registrations(event_id, limit=limit, offset=offset)
     )
+
+
+@router.get("/events/{event_id}/registrations/export")
+def export_event_registrations(event_id: int):
+    event_admin = EventRegistration()
+    return _handle_service_result(event_admin.export_event_registrations_csv(event_id))
 
 
 @router.get("/team-members")
@@ -237,3 +283,73 @@ def update_resource(resource_id: int, resource_data: dict = Body(...)):
 def delete_resource(resource_id: int):
     resource_admin = ResourceManagement()
     return _handle_service_result(resource_admin.delete_resource(resource_id))
+
+
+# ─── Announcements ──────────────────────────────────────────────────────────
+
+
+@router.get("/announcements")
+def get_announcements(
+    limit: int = Query(default=20, ge=1),
+    offset: int = Query(default=0, ge=0),
+    search_title: str | None = None,
+):
+    announcement_admin = AnnouncementsManagement()
+    return _handle_service_result(
+        announcement_admin.get_all_announcements(
+            limit=limit, offset=offset, search_title=search_title
+        )
+    )
+
+
+@router.post("/announcements", status_code=status.HTTP_201_CREATED)
+def create_announcement(data: dict = Body(...)):
+    announcement_admin = AnnouncementsManagement()
+    return _handle_service_result(announcement_admin.create_announcement(data))
+
+
+@router.patch("/announcements/{id}")
+def update_announcement(id: int, data: dict = Body(...)):
+    announcement_admin = AnnouncementsManagement()
+    return _handle_service_result(announcement_admin.update_announcement(id, data))
+
+
+@router.delete("/announcements/{id}")
+def delete_announcement(id: int):
+    announcement_admin = AnnouncementsManagement()
+    return _handle_service_result(announcement_admin.delete_announcement(id))
+
+
+# ─── Projects ───────────────────────────────────────────────────────────────
+
+
+@router.get("/projects")
+def get_projects(
+    limit: int = Query(default=20, ge=1),
+    offset: int = Query(default=0, ge=0),
+    search_title: str | None = None,
+):
+    project_admin = ProjectsManagement()
+    return _handle_service_result(
+        project_admin.get_all_projects(
+            limit=limit, offset=offset, search_title=search_title
+        )
+    )
+
+
+@router.post("/projects", status_code=status.HTTP_201_CREATED)
+def create_project(data: dict = Body(...)):
+    project_admin = ProjectsManagement()
+    return _handle_service_result(project_admin.create_project(data))
+
+
+@router.patch("/projects/{id}")
+def update_project(id: int, data: dict = Body(...)):
+    project_admin = ProjectsManagement()
+    return _handle_service_result(project_admin.update_project(id, data))
+
+
+@router.delete("/projects/{id}")
+def delete_project(id: int):
+    project_admin = ProjectsManagement()
+    return _handle_service_result(project_admin.delete_project(id))

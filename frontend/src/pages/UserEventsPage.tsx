@@ -43,8 +43,9 @@ function EventCard({ eventItem }: { eventItem: PublicEvent }) {
     return (
         <Link
             to={`/user/events/${eventItem.id}`}
-            className="group rounded-[1.5rem] border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-cyan-300/30 hover:bg-cyan-400/10"
+            className="group relative overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/5 p-5 transition hover:-translate-y-1 hover:border-cyan-300/30 hover:bg-cyan-400/10"
         >
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,211,238,0.12),transparent_28%),linear-gradient(135deg,transparent,rgba(59,130,246,0.04))] opacity-0 transition group-hover:opacity-100" />
             <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100/80">
                     {eventItem.type || "event"}

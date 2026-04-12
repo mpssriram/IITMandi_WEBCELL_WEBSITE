@@ -30,6 +30,7 @@ def register_user():
 
 @router.post("/login")
 def login_user():
+    # Intentional: local email/password login is replaced by Firebase Authentication in the frontend.
     raise HTTPException(
         status_code=status.HTTP_410_GONE,
         detail="Local login is disabled. Use Firebase Authentication from the frontend.",
@@ -109,6 +110,16 @@ def register_for_event(
 ):
     service = UserService()
     return service.register_for_event(event_id, current_user)
+
+
+@router.get("/events/my-registrations")
+def get_my_registrations(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: dict = Depends(auth_dependencies.get_current_user),
+):
+    service = UserService()
+    return service.list_my_registrations(current_user, limit, offset)
 
 
 @router.get("/resources")

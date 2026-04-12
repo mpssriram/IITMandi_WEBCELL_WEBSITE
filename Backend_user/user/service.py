@@ -467,6 +467,41 @@ class UserService:
             self._close_cursor(cursor)
             self._close_db()
 
+    def list_my_registrations(self, firebase_user, limit=20, offset=0):
+        cursor = None
+        try:
+            local_user = self.resolve_local_user(firebase_user)
+            cursor = self.db.get_cursor()
+            
+            cursor.execute(
+                """
+                SELECT 
+                    e.id, 
+                    e.title, 
+                    e.type, 
+                    e.description,
+                    DATE_FORMAT(e.date, '%Y-%m-%d') as date, 
+                    e.venue, 
+                    e.poster_image_url
+                FROM event_registrations er
+                JOIN website_events e ON er.event_id = e.id
+                WHERE (er.email = %s OR er.roll_no = %s OR er.notes = %s)
+                ORDER BY e.date DESC
+                LIMIT %s OFFSET %s
+                """,
+                (
+                    local_user.get("email"),
+                    local_user.get("roll_number"),
+                    f"registered_via_firebase_uid={firebase_user.get('uid')}",
+                    limit, offset
+                )
+            )
+            items = cursor.fetchall() or []
+            return {"success": True, "items": items, "count": len(items)}
+        finally:
+            self._close_cursor(cursor)
+            self._close_db()
+
     def submit_join_application(self, payload):
         cursor = None
         try:

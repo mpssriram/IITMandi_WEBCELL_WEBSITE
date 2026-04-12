@@ -584,6 +584,53 @@ class EventRegistration:
             self._close_cursor(cursor)
             self._close_db()
 
+    def export_event_registrations_csv(self, event_id):
+        """Return CSV string of all registrations for a specific event."""
+        import csv
+        import io
+        cursor = None
+
+        try:
+            cursor = self.db.get_cursor()
+            cursor.execute("SELECT title FROM events WHERE id = %s", (event_id,))
+            event = cursor.fetchone()
+            if not event:
+                return self._error_response("Event not found")
+
+            cursor.execute(
+                """
+                SELECT full_name, email, roll_no, branch, year_of_study, phone, notes, created_at
+                FROM event_registrations
+                WHERE event_id = %s
+                ORDER BY created_at ASC
+                """,
+                (event_id,),
+            )
+            registrations = cursor.fetchall()
+            
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["Full Name", "Email", "Roll No", "Branch", "Year of Study", "Phone", "Notes", "Registered At"])
+            
+            for reg in registrations:
+                writer.writerow([
+                    reg.get("full_name") or "",
+                    reg.get("email") or "",
+                    reg.get("roll_no") or "",
+                    reg.get("branch") or "",
+                    reg.get("year_of_study") or "",
+                    reg.get("phone") or "",
+                    reg.get("notes") or "",
+                    reg.get("created_at") or ""
+                ])
+                
+            return self._success_response(data={"csv_data": output.getvalue(), "filename": f"event_{event_id}_registrations.csv"})
+        except Exception as e:
+            return self._error_response(f"Failed to export event registrations: {str(e)}")
+        finally:
+            self._close_cursor(cursor)
+            self._close_db()
+
 
 if __name__ == "__main__":
     event_admin = EventRegistration()

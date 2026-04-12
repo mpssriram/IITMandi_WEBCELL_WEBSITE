@@ -59,7 +59,7 @@ class AuthDependencies:
         if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
             self.logger.info("Malformed authorization header format")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid authorization header format.",
             )
 

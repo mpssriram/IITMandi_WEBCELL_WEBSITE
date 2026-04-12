@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, type ComponentProps } from "react";
 
 import ReactBitsHyperspeed from "@/components/reactbits/Hyperspeed";
 import { hyperspeedPresets } from "@/components/reactbits/HyperSpeedPresets";
@@ -12,7 +12,7 @@ type HyperspeedProps = {
 };
 
 export function Hyperspeed({ effectOptions = {}, className = "", density }: HyperspeedProps) {
-    const mergedOptions = useMemo(() => {
+    const mergedOptions = useMemo<ComponentProps<typeof ReactBitsHyperspeed>["effectOptions"]>(() => {
         const base = hyperspeedPresets.one;
         const sticks = density ?? effectOptions.totalSideLightSticks ?? base.totalSideLightSticks;
         const pairs = density ? Math.max(24, density * 2) : (effectOptions.lightPairsPerRoadWay ?? base.lightPairsPerRoadWay);
@@ -26,7 +26,7 @@ export function Hyperspeed({ effectOptions = {}, className = "", density }: Hype
                 ...base.colors,
                 ...(effectOptions.colors || {}),
             },
-        };
+        } as unknown as ComponentProps<typeof ReactBitsHyperspeed>["effectOptions"];
     }, [density, effectOptions]);
 
     return (

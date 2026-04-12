@@ -60,6 +60,9 @@ export function UserProfilePage({ modal = false }: UserProfilePageProps) {
         navigate("/user/dashboard", { replace: true });
     };
 
+    const profileInitials = (profile?.name || profile?.email || "Dev Cell").trim().split(/\s+/).filter(Boolean);
+    const summaryInitials = profileInitials.length > 1 ? `${profileInitials[0][0] || ""}${profileInitials[1][0] || ""}`.toUpperCase() : (profileInitials[0] || "DC").slice(0, 2).toUpperCase();
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         const token = localStorage.getItem("devcell_id_token");
@@ -89,23 +92,24 @@ export function UserProfilePage({ modal = false }: UserProfilePageProps) {
     };
 
     const shellClassName = modal
-        ? "fixed inset-0 z-[70] flex items-center justify-end bg-[#020712]/72 backdrop-blur-md"
+        ? "fixed inset-0 z-[70] bg-[#020712]/72 backdrop-blur-md"
         : "min-h-screen bg-ink-950 px-4 py-8 sm:px-6 lg:px-8";
 
     const panelClassName = modal
-        ? "h-full w-full max-w-2xl overflow-y-auto border-l border-white/10 bg-[#071225]/96 p-4 sm:p-6"
-        : "mx-auto max-w-2xl";
+        ? "ml-auto h-full w-full max-w-4xl overflow-y-auto border-l border-white/10 bg-[#071225]/96 p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02),-24px_0_90px_-36px_rgba(8,145,178,0.55)] sm:p-6 lg:p-8"
+        : "mx-auto max-w-4xl";
 
     return (
-        <div className={shellClassName}>
-            <div className={panelClassName}>
-                <ElectricCard className="p-6 sm:p-7">
-                    <div className="flex items-start justify-between gap-4">
+        <div className={shellClassName} onClick={modal ? closeProfile : undefined}>
+            <div className={panelClassName} onClick={(event) => event.stopPropagation()}>
+                <ElectricCard className="overflow-hidden p-0">
+                    <div className="flex items-start justify-between gap-4 border-b border-white/10 bg-[linear-gradient(135deg,rgba(5,16,31,0.98),rgba(7,18,37,0.96))] p-6 sm:p-7">
                         <div className="flex items-center gap-4">
                             <UserAvatar name={profile?.name} email={profile?.email} className="h-16 w-16 rounded-[1.6rem]" textClassName="text-lg" />
                             <div>
                                 <p className="text-xs uppercase tracking-[0.22em] text-cyan-100/70">Profile</p>
                                 <h1 className="mt-2 font-display text-3xl font-semibold text-white">Member details</h1>
+                                <p className="mt-2 text-sm text-slate-300">Keep the visible identity and editable profile data in one focused slide-over.</p>
                             </div>
                         </div>
 
@@ -120,29 +124,39 @@ export function UserProfilePage({ modal = false }: UserProfilePageProps) {
                     </div>
 
                     {loading ? (
-                        <div className="mt-8 text-sm text-slate-300">Loading profile...</div>
+                        <div className="p-6 text-sm text-slate-300">Loading profile...</div>
                     ) : (
-                        <>
-                            <div className="mt-8 grid gap-4 rounded-[1.6rem] border border-white/10 bg-white/5 p-5 sm:grid-cols-2">
-                                <div>
-                                    <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Name</p>
-                                    <p className="mt-2 text-sm text-white">{profile?.name || "Not available"}</p>
+                        <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+                            <div className="border-b border-white/10 bg-[linear-gradient(180deg,rgba(7,18,37,0.98),rgba(5,10,20,0.95))] p-6 sm:p-7 lg:border-b-0 lg:border-r lg:border-white/10">
+                                <div className="flex items-center gap-4">
+                                    <div className="grid h-20 w-20 place-items-center rounded-[1.7rem] border border-cyan-300/20 bg-gradient-to-br from-cyan-400/20 via-sky-400/10 to-transparent text-2xl font-semibold text-cyan-50 shadow-[0_20px_50px_-30px_rgba(34,211,238,0.7)]">
+                                        {summaryInitials}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="truncate font-display text-2xl font-semibold text-white">{profile?.name || "Not available"}</p>
+                                        <p className="mt-1 break-all text-sm text-slate-300">{profile?.email || "Not available"}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Email</p>
-                                    <p className="mt-2 break-all text-sm text-white">{profile?.email || "Not available"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Roll number</p>
-                                    <p className="mt-2 text-sm text-white">{profile?.roll_number || "Not added yet"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Role</p>
-                                    <p className="mt-2 text-sm text-white">{profile?.role || "member"}</p>
+
+                                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                                    <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+                                        <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Roll number</p>
+                                        <p className="mt-2 text-sm text-white">{profile?.roll_number || "Not added yet"}</p>
+                                    </div>
+                                    <div className="rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+                                        <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Role</p>
+                                        <p className="mt-2 text-sm text-white">{profile?.role || "member"}</p>
+                                    </div>
+                                    <div className="sm:col-span-2 rounded-[1.4rem] border border-white/10 bg-white/5 p-4">
+                                        <p className="text-[11px] uppercase tracking-[0.2em] text-cyan-100/70">Contact</p>
+                                        <p className="mt-2 text-sm leading-7 text-slate-300">
+                                            Use the edit form to update supported member fields without losing the current page context.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
 
-                            <form onSubmit={handleSubmit} className="mt-6 rounded-[1.6rem] border border-white/10 bg-[#05101f]/90 p-5">
+                            <form onSubmit={handleSubmit} className="p-6 sm:p-7">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 p-2 text-cyan-200">
                                         <PencilLine className="h-4 w-4" />
@@ -153,7 +167,7 @@ export function UserProfilePage({ modal = false }: UserProfilePageProps) {
                                     </div>
                                 </div>
 
-                                <div className="mt-5 grid gap-4">
+                                <div className="mt-5 grid gap-4 md:grid-cols-2">
                                     <label className="grid gap-2 text-sm text-slate-300">
                                         Name
                                         <input
@@ -175,7 +189,7 @@ export function UserProfilePage({ modal = false }: UserProfilePageProps) {
                                     </label>
                                 </div>
 
-                                <div className="mt-5 flex flex-wrap gap-3">
+                                <div className="mt-6 flex flex-wrap gap-3">
                                     <button
                                         type="submit"
                                         disabled={saving}
@@ -198,7 +212,7 @@ export function UserProfilePage({ modal = false }: UserProfilePageProps) {
                                     </p>
                                 ) : null}
                             </form>
-                        </>
+                        </div>
                     )}
                 </ElectricCard>
             </div>

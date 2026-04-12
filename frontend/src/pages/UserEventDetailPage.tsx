@@ -7,15 +7,18 @@ import {
     ExternalLink,
     Globe2,
     ListChecks,
+    Loader2,
     MapPin,
     Sparkles,
+    TicketCheck,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useOutletContext, useParams } from "react-router-dom";
 
 import { ElectricCard } from "@/components/ElectricCard";
 import { Prism } from "@/components/Prism";
-import { getPublicEvent, type PublicEvent } from "@/lib/api";
+import { getPublicEvent, registerForEvent, type PublicEvent } from "@/lib/api";
 import { normalizeExternalUrl } from "@/lib/collections";
+import type { UserAreaContext } from "@/layouts/UserAreaLayout";
 
 type ParsedEventContent = {
     overview: string[];
@@ -112,8 +115,12 @@ function splitParagraphs(text?: string | null) {
 
 export function UserEventDetailPage() {
     const params = useParams();
+    const { token } = useOutletContext<UserAreaContext>();
     const [eventItem, setEventItem] = useState<PublicEvent | null>(null);
     const [loading, setLoading] = useState(true);
+    const [registering, setRegistering] = useState(false);
+    const [registered, setRegistered] = useState(false);
+    const [registerError, setRegisterError] = useState("");
 
     useEffect(() => {
         let mounted = true;
@@ -165,6 +172,8 @@ export function UserEventDetailPage() {
     }
 
     const registrationUrl = normalizeExternalUrl(eventItem.registration_link || eventItem.registration_url);
+    const registrationStatus = String(eventItem.registration_status || eventItem.registrationStatus || "").trim().toLowerCase();
+    const isRegistrationClosed = registrationStatus === "closed" || eventItem.status === "cancelled";
     const posterUrl = normalizeExternalUrl(eventItem.poster_image_url || "");
     const hosts = [eventItem.organizers, eventItem.speakers].filter(Boolean).join(" | ") || null;
     const statusLabel = (eventItem.status || "upcoming").replace(/_/g, " ");
@@ -327,31 +336,89 @@ export function UserEventDetailPage() {
                             <Sparkles className="h-4 w-4" />
                             <p className="text-sm font-semibold text-white">Registration</p>
                         </div>
-                        <p className="mt-3 text-sm leading-7 text-slate-300">
-                            {registrationUrl
-                                ? "Registration is open. Use the official link below."
-                                : "Registration link is not published yet. Check back soon."}
-                        </p>
 
-                        {registrationUrl ? (
-                            <a
-                                href={registrationUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-cyan-400 px-4 py-2 text-sm font-semibold text-ink-950 transition hover:bg-cyan-300"
-                            >
-                                Open registration
-                                <ExternalLink className="h-4 w-4" />
-                            </a>
+                        {/* ── Registered confirmation ─────────────── */}
+                        {registered ? (
+                            <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-400/10 px-4 py-4">
+                                <div className="flex items-center gap-2 text-emerald-300">
+                                    <TicketCheck className="h-4 w-4" />
+                                    <p className="text-sm font-semibold">You're registered!</p>
+                                </div>
+                                <p className="mt-1.5 text-xs leading-5 text-emerald-200/80">
+                                    You have successfully registered for this event. See you there!
+                                </p>
+                            </div>
+                        ) : isRegistrationClosed ? (
+                            <>
+                                <p className="mt-3 text-sm leading-7 text-slate-300">Registration is closed.</p>
+                                <button
+                                    type="button"
+                                    disabled
+                                    className="mt-4 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-400"
+                                >
+                                    Registration closed
+                                    <Globe2 className="h-4 w-4" />
+                                </button>
+                            </>
                         ) : (
-                            <button
-                                type="button"
-                                disabled
-                                className="mt-4 inline-flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-slate-400"
-                            >
-                                Registration opening soon
-                                <Globe2 className="h-4 w-4" />
-                            </button>
+                            <>
+                                <p className="mt-3 text-sm leading-7 text-slate-300">
+                                    {registrationUrl
+                                        ? "You can register below. External link available."
+                                        : "Click below to register for this event."}
+                                </p>
+
+                                {registerError && (
+                                    <p className="mt-2 rounded-xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-300">
+                                        {registerError}
+                                    </p>
+                                )}
+
+                                {/* Internal register button — primary action */}
+                                <button
+                                    type="button"
+                                    disabled={registering}
+                                    onClick={async () => {
+                                        if (!eventItem) return;
+                                        setRegistering(true);
+                                        setRegisterError("");
+                                        try {
+                                            await registerForEvent(token, eventItem.id);
+                                            setRegistered(true);
+                                        } catch (err) {
+                                            const msg = err instanceof Error ? err.message : "Registration failed. Try again.";
+                                            // If the API says already registered, treat it as success
+                                            if (msg.toLowerCase().includes("already")) {
+                                                setRegistered(true);
+                                            } else {
+                                                setRegisterError(msg);
+                                            }
+                                        } finally {
+                                            setRegistering(false);
+                                        }
+                                    }}
+                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-cyan-400 px-4 py-2.5 text-sm font-semibold text-ink-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {registering ? (
+                                        <><Loader2 className="h-4 w-4 animate-spin" /> Registering…</>
+                                    ) : (
+                                        <><TicketCheck className="h-4 w-4" /> Register for this event</>
+                                    )}
+                                </button>
+
+                                {/* External link as secondary option */}
+                                {registrationUrl && (
+                                    <a
+                                        href={registrationUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                                    >
+                                        External form
+                                        <ExternalLink className="h-3.5 w-3.5" />
+                                    </a>
+                                )}
+                            </>
                         )}
                     </ElectricCard>
                 </div>

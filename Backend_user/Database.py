@@ -16,7 +16,7 @@ class TextError(Exception):
 
 class Database:
     USER_SELECT_FIELDS = """
-        id, firebase_uid, name, email, roll_number, role, created_at, updated_at
+        id, firebase_uid, name, email, roll_number, role, active, created_at, updated_at
     """
 
     def __init__(self, config: Config | None = None):

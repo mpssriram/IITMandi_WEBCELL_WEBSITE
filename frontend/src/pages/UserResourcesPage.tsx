@@ -258,7 +258,7 @@ export function UserResourcesPage() {
 
                                                 <h3 className="mt-4 font-semibold text-white">{resource.title}</h3>
                                                 <p className="mt-3 text-sm leading-7 text-slate-300">{resource.description || "Open resource to read more."}</p>
-                                                <p className="mt-4 break-all text-xs text-slate-400">{resource.url}</p>
+                                                <p className="mt-4 break-all text-xs text-slate-400">{resource.url || "Not available yet"}</p>
 
                                                 {resourceUrl ? (
                                                     <a
@@ -271,9 +271,9 @@ export function UserResourcesPage() {
                                                         <ArrowUpRight className="h-4 w-4" />
                                                     </a>
                                                 ) : (
-                                                    <button type="button" disabled className="mt-4 inline-flex cursor-not-allowed items-center gap-2 text-sm font-semibold text-slate-400">
-                                                        Link unavailable
-                                                    </button>
+                                                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-400">
+                                                        Not available yet
+                                                    </span>
                                                 )}
                                             </article>
                                         );
