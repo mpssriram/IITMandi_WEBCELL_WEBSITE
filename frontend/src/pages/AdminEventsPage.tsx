@@ -176,7 +176,20 @@ export default function AdminEventsPage() {
         setExporting(true);
         setExportError(null);
         try {
-            await exportAdminEventRegistrations(token, activeEventId);
+            const result = await exportAdminEventRegistrations(token, activeEventId);
+            if (result.success && result.data.csv_data) {
+                const blob = new Blob([result.data.csv_data], { type: 'text/csv;charset=utf-8;' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', result.data.filename || `event_${activeEventId}_registrations.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            } else {
+                throw new Error("Repository returned null payload.");
+            }
         } catch (err: any) {
             setExportError(err?.message || "Export pipeline failed.");
         } finally {
@@ -280,7 +293,7 @@ export default function AdminEventsPage() {
                                                 </div>
                                                 <div className="flex items-center gap-2 text-[10px] text-slate-500">
                                                     <MapPin className="h-3 w-3 text-slate-600" />
-                                                    {(event as any).location || event.venue || "GRID_LOC_TBD"}
+                                                    {(event as any).location || event.venue || "LOCATION_UNSPECIFIED"}
                                                 </div>
                                             </div>
                                         </td>
@@ -349,7 +362,7 @@ export default function AdminEventsPage() {
                         ) : (
                             <tr>
                                 <td colSpan={5} className="py-20 text-center">
-                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-700">PIPELINE_EMPTY: ZERO_EVENTS_IN_REGISTRY</span>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-700">EVENT_PIPELINE_VACANT: ZERO_RECORDS_PROVISIONED</span>
                                 </td>
                             </tr>
                         )}

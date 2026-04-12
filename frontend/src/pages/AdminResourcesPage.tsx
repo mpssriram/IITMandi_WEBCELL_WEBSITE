@@ -153,10 +153,10 @@ export default function AdminResourcesPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
                         <input
                             type="text"
-                            placeholder="QUERY REPOSITORY..."
+                            placeholder="QUERY REPOSITORY (TITLE, CATEGORY)..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="h-9 w-full rounded-lg border border-white/[0.05] bg-[#070b12] pl-9 pr-4 text-[12px] text-white focus:border-cyan-500 focus:outline-none transition-all placeholder:text-slate-600"
+                            className="h-10 w-full rounded-lg border border-white/[0.05] bg-[#070b12] pl-9 pr-4 text-[12px] font-mono text-white focus:border-cyan-500 focus:outline-none transition-all placeholder:text-slate-600"
                         />
                     </div>
                     <button
@@ -168,7 +168,7 @@ export default function AdminResourcesPage() {
                         className="flex h-9 items-center gap-2 rounded-lg bg-cyan-500 px-4 text-[11px] font-black uppercase tracking-wider text-slate-900 transition-all hover:bg-cyan-400 active:scale-95"
                     >
                         <Plus className="h-3.5 w-3.5" />
-                        REGISTER_ENTITY
+                        REGISTER_NODE
                     </button>
                 </div>
             </div>
@@ -235,7 +235,7 @@ export default function AdminResourcesPage() {
                                             </div>
                                             <div className="flex items-center gap-2 text-[10px] text-slate-500">
                                                 <User className="h-3 w-3 text-slate-600" />
-                                                {res.uploaded_by || "IDENTITY_TBD"}
+                                                {res.uploaded_by || "SYSTEM_PROVISIONED"}
                                             </div>
                                         </div>
                                     </td>
@@ -291,7 +291,7 @@ export default function AdminResourcesPage() {
                         ) : (
                             <tr>
                                 <td colSpan={5} className="py-20 text-center">
-                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-700">LIBRARY_VACANT: ZERO_RECORDS_FOUND</span>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-700">REPOSITORY_VACANT: ZERO_NODES_PROVISIONED</span>
                                 </td>
                             </tr>
                         )}
@@ -308,7 +308,7 @@ export default function AdminResourcesPage() {
                         </div>
                         <div className="flex items-center justify-between relative z-10">
                             <h2 className="text-[16px] font-black uppercase tracking-[0.2em] text-white">
-                                {editingResourceId ? "EDIT_ENTITY_CFG" : "REGISTER_NEW_RESOURCE"}
+                                {editingResourceId ? "EDIT_NODE_CFG" : "PROVISION_NEW_NODE"}
                             </h2>
                             <button onClick={() => setModalOpen(false)} className="text-slate-500 hover:text-white transition-colors"><X className="h-5 w-5" /></button>
                         </div>
@@ -332,8 +332,8 @@ export default function AdminResourcesPage() {
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">PROTOCOL_URL *</label>
-                                <input required type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className={INPUT_CLS} placeholder="https://..." />
+                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">REMOTE_PROTOCOL_URL *</label>
+                                <input required type="url" value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} className={INPUT_CLS} placeholder="https://external-storage.com/resource" title="Provide a direct remote link to the file or site." />
                             </div>
 
                             <div className="space-y-1.5">

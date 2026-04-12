@@ -13,10 +13,8 @@ class ResourceManagement:
     ALLOWED_RESOURCE_TYPES = ["pdf", "article", "video", "link", "doc", "other"]
 
     def __init__(self):
-        # Set up the resource manager and ensure the local resource folder exists
+        # Set up the resource manager with the shared database helper
         self.db = Database()
-        self.resources_dir = os.path.join(os.getcwd(), "resources")
-        os.makedirs(self.resources_dir, exist_ok=True)
 
     def _success_response(self, data=None, message=None, **extra):
         # Builds a standard success response used by this file
@@ -113,53 +111,19 @@ class ResourceManagement:
 
         return self._success_response(data=cleaned_data)
 
-    def _safe_copy_pdf(self, source_path, title):
-        """Copy a PDF into local storage and return the new stored path."""
-        if not source_path or not os.path.isfile(source_path):
-            return self._error_response("PDF file not found")
-
-        safe_title = str(title or "resource").strip().replace(" ", "_")
-        file_name = f"{safe_title}_{os.path.basename(source_path)}"
-        dest_path = os.path.join(self.resources_dir, file_name)
-        shutil.copy2(source_path, dest_path)
-        return self._success_response(data={"path": dest_path})
-
     def _safe_delete_file(self, path):
-        """Delete a local file safely without raising file-system errors."""
-        if not path:
-            return True
-        try:
-            if os.path.isfile(path):
-                os.remove(path)
-            return True
-        except OSError:
-            return False
-
-    def _is_local_resource_file(self, path):
-        """Check whether a file path points inside the local resources folder."""
-        if not path:
-            return False
-        abs_path = os.path.abspath(path)
-        resources_root = os.path.abspath(self.resources_dir)
-        return abs_path.startswith(resources_root)
+        """Deprecated: Local file clean-up no longer required for URL-based nodes."""
+        return True
 
     def create_resource(self, resource_data):
-        """Create a new resource and copy PDF files into local storage when needed."""
+        """Create a new resource directly using the provided metadata."""
         cursor = None
-        copied_pdf_path = None
 
         validation = self._validate_resource_payload(resource_data, partial=False)
         if not validation["success"]:
             return validation
 
         cleaned_data = validation["data"]
-
-        if self._is_pdf_type(cleaned_data["type"]):
-            copy_result = self._safe_copy_pdf(cleaned_data["url"], cleaned_data["title"])
-            if not copy_result["success"]:
-                return copy_result
-            copied_pdf_path = copy_result["data"]["path"]
-            cleaned_data["url"] = copied_pdf_path
 
         try:
             cursor = self.db.get_cursor()
@@ -188,8 +152,6 @@ class ResourceManagement:
             )
         except Exception as e:
             self.db.rollback()
-            if copied_pdf_path:
-                self._safe_delete_file(copied_pdf_path)
             return self._error_response(f"Failed to create resource: {str(e)}")
         finally:
             self._close_cursor(cursor)
@@ -382,51 +344,10 @@ class ResourceManagement:
             self._close_cursor(cursor)
             self._close_db()
 
-    def update_resource(self, resource_id, resource_data):
-        """Update a resource and safely replace stored PDF files when required."""
-        cursor = None
-        new_pdf_path = None
-        old_pdf_path = None
-
-        validation = self._validate_resource_payload(resource_data, partial=True)
-        if not validation["success"]:
-            return validation
-
-        cleaned_data = validation["data"]
-
-        try:
-            cursor = self.db.get_cursor()
-            cursor.execute(
-                """
-                SELECT id, title, description, type, url, category, uploaded_by
-                FROM resources
-                WHERE id = %s
-                """,
-                (resource_id,),
-            )
-            existing_resource = cursor.fetchone()
-
-            if not existing_resource:
-                return self._error_response("Resource not found")
-
             updated_resource = dict(existing_resource)
             updated_resource.update(cleaned_data)
 
-            if self._is_pdf_type(updated_resource.get("type")):
-                incoming_url = cleaned_data.get("url")
-                if incoming_url:
-                    copy_result = self._safe_copy_pdf(
-                        incoming_url,
-                        cleaned_data.get("title", updated_resource.get("title")),
-                    )
-                    if not copy_result["success"]:
-                        return copy_result
-                    new_pdf_path = copy_result["data"]["path"]
-                    updated_resource["url"] = new_pdf_path
-                    old_pdf_path = existing_resource.get("url")
-                elif not existing_resource.get("url"):
-                    return self._error_response("PDF resources require a valid file path")
-            elif "url" in cleaned_data and not cleaned_data.get("url"):
+            if "url" in cleaned_data and not cleaned_data.get("url"):
                 return self._error_response("url cannot be empty")
 
             update_fields = []
@@ -441,19 +362,9 @@ class ResourceManagement:
             cursor.execute(sql, tuple(values))
             self.db.commit()
 
-            if (
-                new_pdf_path
-                and old_pdf_path
-                and old_pdf_path != new_pdf_path
-                and self._is_local_resource_file(old_pdf_path)
-            ):
-                self._safe_delete_file(old_pdf_path)
-
             return self._success_response(message="Resource updated successfully")
         except Exception as e:
             self.db.rollback()
-            if new_pdf_path:
-                self._safe_delete_file(new_pdf_path)
             return self._error_response(f"Failed to update resource: {str(e)}")
         finally:
             self._close_cursor(cursor)
@@ -481,18 +392,9 @@ class ResourceManagement:
             cursor.execute("DELETE FROM resources WHERE id = %s", (resource_id,))
             self.db.commit()
 
-            file_delete_warning = None
-            if (
-                self._is_pdf_type(resource.get("type"))
-                and resource.get("url")
-                and self._is_local_resource_file(resource.get("url"))
-            ):
-                if not self._safe_delete_file(resource.get("url")):
-                    file_delete_warning = "Resource deleted, but local file could not be removed"
-
             return self._success_response(
                 data={"resource_id": resource_id},
-                message=file_delete_warning or "Resource deleted successfully",
+                message="Resource deleted successfully",
             )
         except Exception as e:
             self.db.rollback()

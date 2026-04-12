@@ -1,20 +1,8 @@
 import { useEffect, useState, useCallback, memo } from "react";
-import {
-    UserPlus,
-    Search,
-    Filter,
-    Mail,
-    CheckCircle2,
-    Clock,
-    Trash2,
-    ShieldOff,
-    ShieldCheck,
-    CalendarDays,
-    AlertCircle,
-    Loader2,
-} from "lucide-react";
+import { UserPlus, Search, Filter, Mail, CheckCircle2, Clock, Trash2, ShieldOff, ShieldCheck, CalendarDays, AlertCircle, Loader2, Users as UsersIcon, ShieldAlert } from "lucide-react";
 
 import { useAuth } from "@/context/AuthContext";
+import { ElectricCard } from "@/components/ElectricCard";
 import {
     getAdminUsers,
     createAdminUser,
@@ -41,7 +29,7 @@ function formatDate(raw?: string | null) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const TH = ({ label, align = "left" }: { label: string; align?: "left" | "right" | "center" }) => (
-    <th className={`px-4 py-3 text-${align} text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/[0.05] bg-white/[0.02]`}>
+    <th className={`px-4 py-3 text-${align} text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 border-b border-white/[0.05] bg-[#0d121c]`}>
         {label}
     </th>
 );
@@ -129,13 +117,13 @@ const UserRow = memo(({ user, onRefresh }: UserRowProps) => {
                 <td className="px-4 py-2">
                     {isLinked ? (
                         <div className="flex items-center gap-1.5 text-emerald-500">
-                            <div className="h-1 w-1 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]" />
-                            <span className="text-[10px] font-bold uppercase tracking-tighter">Verified</span>
+                            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter">Verified</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-1.5 text-amber-500">
-                            <div className="h-1 w-1 rounded-full bg-amber-500 animate-pulse" />
-                            <span className="text-[10px] font-bold uppercase tracking-tighter">Legacy</span>
+                        <div className="flex items-center gap-1.5 text-slate-500">
+                            <div className="h-1.5 w-1.5 rounded-full bg-slate-700" />
+                            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-600">Legend</span>
                         </div>
                     )}
                 </td>
@@ -176,11 +164,11 @@ const UserRow = memo(({ user, onRefresh }: UserRowProps) => {
                 </td>
             </tr>
             {rowError && (
-                <tr>
+                <tr className="border-b border-white/[0.03]">
                     <td colSpan={6} className="px-4 py-2 bg-rose-500/5">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-rose-500 flex items-center gap-2">
-                            <AlertCircle className="h-3 w-3" />
-                            Error: {rowError}
+                        <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-rose-500 flex items-center gap-2">
+                            <ShieldAlert className="h-3 w-3" />
+                            ACCESS_ERROR: {rowError.toUpperCase()}
                         </p>
                     </td>
                 </tr>
@@ -207,19 +195,24 @@ export default function AdminUsersPage() {
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
 
+    const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "user">("all");
+
     const fetchUsers = useCallback(async () => {
         if (!token) return;
         setLoading(true);
         setError(null);
         try {
-            const result = await getAdminUsers(token, 100, 0, { search: search || undefined });
+            const result = await getAdminUsers(token, 100, 0, { 
+                search: search || undefined,
+                role: roleFilter === "all" ? undefined : roleFilter
+            });
             setUsers(result.items || []);
         } catch (err: any) {
-            setError(err?.message || "Failed to load users");
+            setError(err?.message || "Registry Sync Failed");
         } finally {
             setLoading(false);
         }
-    }, [token, search]);
+    }, [token, search, roleFilter]);
 
     useEffect(() => {
         const t = setTimeout(fetchUsers, 300);
@@ -243,62 +236,98 @@ export default function AdminUsersPage() {
         }
     };
 
+    const adminCount = users.filter(u => String(u.role).toLowerCase() === 'admin').length;
+
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h1 className="font-display text-2xl font-bold tracking-tight text-white">User Management</h1>
-                    <p className="mt-1 text-[13px] text-slate-400">
-                        Provision accounts and manage administrative access.
-                    </p>
+        <div className="space-y-6 animate-in fade-in duration-500">
+            {/* Metric Overview Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono">
+                <ElectricCard className="p-4 bg-[#090d16]">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Total Registry</span>
+                        <div className="mt-1 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-white">{users.length}</span>
+                            <span className="text-[10px] text-emerald-400">Synced</span>
+                        </div>
+                    </div>
+                </ElectricCard>
+                <ElectricCard className="p-4 bg-[#090d16]">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Admin Nodes</span>
+                        <div className="mt-1 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-cyan-400">{adminCount}</span>
+                            <span className="text-[10px] text-cyan-500/50">Privileged</span>
+                        </div>
+                    </div>
+                </ElectricCard>
+                <ElectricCard className="p-4 bg-[#090d16]">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Verified Access</span>
+                        <div className="mt-1 flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-emerald-400">{users.filter(u => !!u.firebase_uid).length}</span>
+                            <span className="text-[10px] text-emerald-500/50">Identified</span>
+                        </div>
+                    </div>
+                </ElectricCard>
+            </div>
+
+            {/* Operational Toolbar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-white/[0.05] bg-[#090d16] p-4">
+                <div className="flex flex-1 items-center gap-3 w-full max-w-2xl">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+                        <input
+                            type="text"
+                            placeholder="QUERY USER_REGISTRY (NAME, EMAIL, ROLL)..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="h-10 w-full rounded-lg border border-white/[0.05] bg-[#070b12] pl-9 pr-4 text-[12px] font-mono text-white focus:border-cyan-500 focus:outline-none transition-all placeholder:text-slate-600"
+                        />
+                    </div>
+                    <div className="h-8 w-px bg-white/[0.05]" />
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-3.5 w-3.5 text-slate-500" />
+                        <select 
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value as any)}
+                            className="h-10 bg-transparent border-none text-[11px] font-black uppercase tracking-widest text-slate-400 focus:ring-0 cursor-pointer hover:text-cyan-400 transition-colors"
+                        >
+                            <option value="all" className="bg-[#0d121c]">ALL_TIERS</option>
+                            <option value="admin" className="bg-[#0d121c]">ADMIN_ONLY</option>
+                            <option value="user" className="bg-[#0d121c]">DEFAULT_USER</option>
+                        </select>
+                    </div>
                 </div>
                 <button
                     onClick={() => { setForm(EMPTY_FORM); setSubmitError(null); setModalOpen(true); }}
-                    className="flex h-10 items-center gap-2 rounded-lg bg-cyan-500 px-4 text-sm font-bold text-slate-900 transition-all hover:bg-cyan-400"
+                    className="flex h-10 items-center gap-2 rounded-lg bg-cyan-500 px-6 text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 transition-all hover:bg-cyan-400 active:scale-95 shadow-lg shadow-cyan-500/20"
                 >
                     <UserPlus className="h-4 w-4" />
-                    Add User
+                    PROVISION_USER
                 </button>
             </div>
 
-            {/* Search + Filter */}
-            <div className="flex items-center gap-3 rounded-xl border border-slate-800 bg-[#0d121c]/50 p-2">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                    <input
-                        type="text"
-                        placeholder="Search by name, email, roll number..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="h-9 w-full bg-transparent pl-9 pr-4 text-[13px] text-slate-200 placeholder:text-slate-600 focus:outline-none"
-                    />
-                </div>
-                <div className="h-4 w-px bg-slate-700" />
-                <div className="flex h-9 items-center gap-2 px-3 text-[12px] font-semibold text-slate-500">
-                    <Filter className="h-4 w-4" />
-                    All Roles
-                </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-hidden rounded-xl border border-slate-800 bg-[#0d121c] shadow-sm">
-                <table className="w-full border-collapse">
+            {/* Registry Table */}
+            <div className="overflow-hidden rounded-xl border border-white/[0.05] bg-[#090d16] shadow-xl">
+                <table className="w-full text-left">
                     <thead>
-                        <tr className="bg-slate-800/20">
-                            <TH label="Member" />
-                            <TH label="Email" />
-                            <TH label="Role" />
-                            <TH label="Firebase Status" />
-                            <TH label="Created" />
-                            <th className="border-b border-slate-800" />
+                        <tr>
+                            <TH label="Member / Identity" />
+                            <TH label="Credential Alias" />
+                            <TH label="Access Tier" />
+                            <TH label="Sync State" />
+                            <TH label="Provisioned At" />
+                            <TH label="Control" align="right" />
                         </tr>
                     </thead>
-                    <tbody>
-                        {loading ? (
+                    <tbody className="divide-y divide-white/[0.05]">
+                        {loading && users.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="py-20 text-center text-[13px] italic text-slate-500">
-                                    Loading users...
+                                <td colSpan={6} className="py-20 text-center">
+                                    <div className="flex flex-col items-center gap-3">
+                                        <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+                                        <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">Streaming Records...</span>
+                                    </div>
                                 </td>
                             </tr>
                         ) : error ? (
@@ -306,13 +335,8 @@ export default function AdminUsersPage() {
                                 <td colSpan={6} className="py-20 text-center">
                                     <div className="flex flex-col items-center gap-2">
                                         <AlertCircle className="h-6 w-6 text-rose-500" />
-                                        <span className="text-[13px] text-rose-400">{error}</span>
-                                        <button
-                                            onClick={fetchUsers}
-                                            className="mt-2 rounded-md bg-slate-800 px-4 py-1.5 text-[12px] text-slate-300 hover:bg-slate-700"
-                                        >
-                                            Retry
-                                        </button>
+                                        <span className="text-[11px] font-black text-rose-400 uppercase tracking-widest">{error}</span>
+                                        <button onClick={fetchUsers} className="mt-2 text-[10px] font-black underline underline-offset-4 text-cyan-400">RE-INIT SYNC</button>
                                     </div>
                                 </td>
                             </tr>
@@ -322,8 +346,8 @@ export default function AdminUsersPage() {
                             ))
                         ) : (
                             <tr>
-                                <td colSpan={6} className="py-20 text-center text-slate-600 text-sm">
-                                    No users found.
+                                <td colSpan={6} className="py-20 text-center">
+                                    <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-700">REGISTRY_VACANT: ZERO_RECORDS_FOUND</span>
                                 </td>
                             </tr>
                         )}
