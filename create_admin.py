@@ -1,3 +1,5 @@
+import os
+
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 
@@ -13,7 +15,9 @@ db = firestore.client()
 
 def create_admin():
     email = "admin@iitmandi.ac.in"
-    password = "adminpassword123"
+    password = os.environ.get("ADMIN_INITIAL_PASSWORD")
+    if not password:
+        raise RuntimeError("Set ADMIN_INITIAL_PASSWORD before running create_admin.py")
     
     try:
         # Check if user already exists

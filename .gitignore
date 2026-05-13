@@ -1,17 +1,25 @@
 # Python cache
 __pycache__/
 *.pyc
+.venv/
+
+# Node / package manager artifacts
+node_modules/
+.npm-cache/
+.npmrc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
 
 # Local config / secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
 firebase.js
 Backend/config.yaml
 Backend/firebase-adminsdk.json
 
-# Optional env files
-.env
-.env.*
-
-
-
-
-
+# Local logs
+*.log

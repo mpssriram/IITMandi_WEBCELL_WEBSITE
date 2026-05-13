@@ -215,16 +215,16 @@ class UserService:
             values = []
 
             if search_title:
-                conditions.append("title LIKE %s")
+                conditions.append("merged.title LIKE %s")
                 values.append(f"%{str(search_title).strip()}%")
 
             if search_organizer:
-                conditions.append("(organizers LIKE %s OR speakers LIKE %s)")
                 organizer_value = f"%{str(search_organizer).strip()}%"
+                conditions.append("(merged.organizers LIKE %s OR merged.speakers LIKE %s)")
                 values.extend([organizer_value, organizer_value])
 
             if search_location:
-                conditions.append("venue LIKE %s")
+                conditions.append("merged.venue LIKE %s")
                 values.append(f"%{str(search_location).strip()}%")
 
             where_clause = ""
@@ -234,21 +234,53 @@ class UserService:
             cursor.execute(
                 f"""
                 SELECT
-                    id,
-                    title,
-                    type,
-                    description,
-                    DATE_FORMAT(date, '%Y-%m-%d') AS date,
-                    venue,
-                    registration_link,
-                    poster_image_url,
-                    speakers,
-                    organizers,
-                    status,
-                    featured
-                FROM website_events
+                    merged.id,
+                    merged.title,
+                    merged.type,
+                    merged.description,
+                    merged.date,
+                    merged.venue,
+                    merged.registration_link,
+                    merged.poster_image_url,
+                    merged.speakers,
+                    merged.organizers,
+                    merged.status,
+                    merged.featured
+                FROM (
+                    SELECT
+                        we.id AS id,
+                        we.title AS title,
+                        we.type AS type,
+                        we.description AS description,
+                        DATE_FORMAT(we.date, '%Y-%m-%d') AS date,
+                        we.venue AS venue,
+                        we.registration_link AS registration_link,
+                        we.poster_image_url AS poster_image_url,
+                        we.speakers AS speakers,
+                        we.organizers AS organizers,
+                        COALESCE(NULLIF(LOWER(TRIM(we.status)), ''), CASE WHEN we.date >= CURDATE() THEN 'upcoming' ELSE 'completed' END) AS status,
+                        COALESCE(we.featured, 0) AS featured
+                    FROM website_events we
+
+                    UNION ALL
+
+                    SELECT
+                        e.id AS id,
+                        e.title AS title,
+                        'other' AS type,
+                        e.description AS description,
+                        DATE_FORMAT(e.date, '%Y-%m-%d') AS date,
+                        e.location AS venue,
+                        NULL AS registration_link,
+                        NULL AS poster_image_url,
+                        NULL AS speakers,
+                        e.organizer AS organizers,
+                        CASE WHEN e.date >= CURDATE() THEN 'upcoming' ELSE 'completed' END AS status,
+                        0 AS featured
+                    FROM events e
+                ) AS merged
                 {where_clause}
-                ORDER BY featured DESC, date DESC, id DESC
+                ORDER BY merged.featured DESC, merged.date DESC, merged.id DESC
                 LIMIT %s OFFSET %s
                 """,
                 (*values, limit, offset),
@@ -266,22 +298,57 @@ class UserService:
             cursor.execute(
                 """
                 SELECT
-                    id,
-                    title,
-                    type,
-                    description,
-                    DATE_FORMAT(date, '%Y-%m-%d') AS date,
-                    venue,
-                    registration_link,
-                    poster_image_url,
-                    speakers,
-                    organizers,
-                    status,
-                    featured
-                FROM website_events
-                WHERE id = %s
+                    merged.id,
+                    merged.title,
+                    merged.type,
+                    merged.description,
+                    merged.date,
+                    merged.venue,
+                    merged.registration_link,
+                    merged.poster_image_url,
+                    merged.speakers,
+                    merged.organizers,
+                    merged.status,
+                    merged.featured
+                FROM (
+                    SELECT
+                        we.id AS id,
+                        we.title AS title,
+                        we.type AS type,
+                        we.description AS description,
+                        DATE_FORMAT(we.date, '%Y-%m-%d') AS date,
+                        we.venue AS venue,
+                        we.registration_link AS registration_link,
+                        we.poster_image_url AS poster_image_url,
+                        we.speakers AS speakers,
+                        we.organizers AS organizers,
+                        COALESCE(NULLIF(LOWER(TRIM(we.status)), ''), CASE WHEN we.date >= CURDATE() THEN 'upcoming' ELSE 'completed' END) AS status,
+                        COALESCE(we.featured, 0) AS featured
+                    FROM website_events we
+                    WHERE we.id = %s
+
+                    UNION ALL
+
+                    SELECT
+                        e.id AS id,
+                        e.title AS title,
+                        'other' AS type,
+                        e.description AS description,
+                        DATE_FORMAT(e.date, '%Y-%m-%d') AS date,
+                        e.location AS venue,
+                        NULL AS registration_link,
+                        NULL AS poster_image_url,
+                        NULL AS speakers,
+                        e.organizer AS organizers,
+                        CASE WHEN e.date >= CURDATE() THEN 'upcoming' ELSE 'completed' END AS status,
+                        0 AS featured
+                    FROM events e
+                    WHERE e.id = %s
+                ) AS merged
+                ORDER BY merged.featured DESC
+                LIMIT 1
                 """,
-                (event_id,),
+                (event_id, event_id),
             )
             event = cursor.fetchone()
             if not event:

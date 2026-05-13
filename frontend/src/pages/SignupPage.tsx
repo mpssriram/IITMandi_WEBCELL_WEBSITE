@@ -63,13 +63,7 @@ export function SignupPage() {
             onboarding_required?: boolean;
         };
 
-        const isAdmin = Boolean(payload?.user?.admin) || payload?.user?.role === "admin";
         const needsOnboarding = Boolean(payload?.onboarding_required) || !payload?.user?.roll_number;
-
-        if (isAdmin) {
-            navigate("/admin/dashboard", { replace: true });
-            return;
-        }
 
         navigate(needsOnboarding ? "/user/profile" : "/user/dashboard", { replace: true });
     };

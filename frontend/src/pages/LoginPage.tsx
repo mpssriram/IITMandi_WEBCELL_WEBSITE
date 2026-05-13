@@ -68,7 +68,12 @@ export function LoginPage() {
     const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
     const from = (location.state as { from?: Location } | null)?.from;
-    const intendedPath = from?.pathname && from.pathname !== "/login" ? from.pathname : null;
+    const intendedPath =
+        from?.pathname &&
+            from.pathname !== "/login" &&
+            !from.pathname.startsWith("/admin")
+            ? `${from.pathname}${from.search || ""}${from.hash || ""}`
+            : null;
     const isAuthenticated = Boolean(user && token);
 
     useEffect(() => {
@@ -180,7 +185,7 @@ export function LoginPage() {
         <div className="relative isolate flex min-h-screen flex-col items-center justify-center overflow-hidden px-4 py-12 text-white sm:px-6">
             <div className="fixed inset-0 -z-30 bg-[#030912]" />
             <Hyperspeed className="-z-20 opacity-40" />
-            
+
             {/* ── Ambient background — one subtle radial, no animation ─── */}
             <div
                 aria-hidden
